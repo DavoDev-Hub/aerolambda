@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { registro, login, perfil } from '../controllers/auth.controller';
 import { validate } from '../middleware/validate';
 import { registroSchema, loginSchema } from '../validators/auth.validator';
+import { autenticar } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -24,6 +25,6 @@ router.post('/login', validate(loginSchema), login);
  * @desc    Obtener perfil del usuario autenticado
  * @access  Privado (requiere token)
  */
-// router.get('/perfil', autenticar, perfil); // Lo activaremos después de crear el middleware
+router.get('/perfil', autenticar, perfil);
 
 export default router;

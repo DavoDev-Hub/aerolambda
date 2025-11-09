@@ -3,6 +3,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from './config/database';
 
+// Importar rutas
+import authRoutes from './routes/auth.routes';
+
 // Cargar variables de entorno
 dotenv.config();
 
@@ -24,6 +27,17 @@ app.get('/api/health', (req: Request, res: Response) => {
   });
 });
 
+// Rutas de la aplicación
+app.use('/api/auth', authRoutes);
+
+// Manejador de rutas no encontradas
+app.use((req: Request, res: Response) => {
+  res.status(404).json({
+    success: false,
+    message: 'Ruta no encontrada'
+  });
+});
+
 // Conectar a la base de datos y luego iniciar el servidor
 const startServer = async () => {
   try {
@@ -34,6 +48,10 @@ const startServer = async () => {
     app.listen(PORT, () => {
       console.log(`Servidor corriendo en http://localhost:${PORT}`);
       console.log(`AeroLambda Backend - TypeScript`);
+      console.log(`Rutas disponibles:`);
+      console.log(`   - GET  /api/health`);
+      console.log(`   - POST /api/auth/registro`);
+      console.log(`   - POST /api/auth/login`);
     });
   } catch (error) {
     console.error('Error al iniciar el servidor:', error);

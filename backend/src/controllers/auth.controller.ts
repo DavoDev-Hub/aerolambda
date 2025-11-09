@@ -27,13 +27,11 @@ export const registro = async (req: Request, res: Response): Promise<void> => {
       rol: rol || 'cliente'
     });
 
-// En la función registro, cambia esta parte:
-    // Generar token
 // Generar token
     const token = generarToken({
-    id: nuevoUsuario._id.toString(),
-    email: nuevoUsuario.email,
-    rol: nuevoUsuario.rol
+      id: nuevoUsuario._id.toString(),
+      email: nuevoUsuario.email,
+      rol: nuevoUsuario.rol
     });
 
     res.status(201).json({
@@ -99,10 +97,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     usuario.ultimoAcceso = new Date();
     await usuario.save();
 
-    // Generar token
 // Generar token
     const token = generarToken({
-      id: (usuario._id as any).toString(),  // Cast explícito
+      id: usuario._id.toString(),
       email: usuario.email,
       rol: usuario.rol
     });
@@ -135,7 +132,15 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 export const perfil = async (req: Request, res: Response): Promise<void> => {
   try {
     // El ID viene del middleware de autenticación
-    const userId = (req as any).usuario.id;
+    const userId = req.usuario?.id;
+
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        message: 'No autenticado'
+      });
+      return;
+    }
 
     const usuario = await User.findById(userId);
     
