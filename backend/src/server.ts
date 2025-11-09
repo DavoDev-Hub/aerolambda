@@ -1,6 +1,7 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import connectDB from './config/database';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -18,14 +19,29 @@ app.get('/api/health', (req: Request, res: Response) => {
   res.json({ 
     status: 'ok', 
     message: 'AeroLambda API está funcionando',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    database: 'MongoDB conectado'
   });
 });
 
-// Iniciar servidor
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
-  console.log(`AeroLambda Backend - TypeScript`);
-});
+// Conectar a la base de datos y luego iniciar el servidor
+const startServer = async () => {
+  try {
+    // Conectar a MongoDB
+    await connectDB();
+    
+    // Iniciar servidor
+    app.listen(PORT, () => {
+      console.log(`Servidor corriendo en http://localhost:${PORT}`);
+      console.log(`AeroLambda Backend - TypeScript`);
+    });
+  } catch (error) {
+    console.error('Error al iniciar el servidor:', error);
+    process.exit(1);
+  }
+};
+
+// Iniciar
+startServer();
 
 export default app;

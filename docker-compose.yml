@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  # Base de datos MongoDB
+  mongo:
+    image: mongo:7.0
+    container_name: aerolambda-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: aerolambda
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - aerolambda-network
+
+  # Backend (lo agregaremos después)
+  # backend:
+  #   ...
+
+  # Frontend (lo agregaremos después)
+  # frontend:
+  #   ...
+
+volumes:
+  mongo-data:
+    driver: local
+
+networks:
+  aerolambda-network:
+    driver: bridge
