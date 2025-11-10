@@ -14,14 +14,48 @@ services:
       - mongo-data:/data/db
     networks:
       - aerolambda-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/aerolambda --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # Backend (lo agregaremos después)
-  # backend:
-  #   ...
-
-  # Frontend (lo agregaremos después)
-  # frontend:
-  #   ...
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: aerolambda-backend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      # Server
+      PORT: 5000
+      NODE_ENV: production
+      
+      # MongoDB
+      MONGODB_URI: mongodb://mongo:27017/aerolambda
+      
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-aerolambda_jwt_secret_change_in_production}
+      JWT_EXPIRES_IN: 7d
+      
+      # Email (Simulado)
+      EMAIL_HOST: smtp.mailtrap.io
+      EMAIL_PORT: 2525
+      EMAIL_USER: usuario_simulado
+      EMAIL_PASS: password_simulado
+      EMAIL_FROM: noreply@aerolambda.com
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - aerolambda-network
+    volumes:
+      # Para desarrollo: sincronizar código en tiempo real (comentar en producción)
+      # - ./backend/src:/app/src
+      - /app/node_modules
 
 volumes:
   mongo-data:
