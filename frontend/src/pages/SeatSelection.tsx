@@ -16,10 +16,14 @@ export default function SeatSelection() {
   const navigate = useNavigate();
 
   const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
+  const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
   const [occupiedSeats, setOccupiedSeats] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [flightData, setFlightData] = useState<any>(null);
+  const [seatsData, setSeatsData] = useState<Seat[]>([]);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -47,6 +51,7 @@ export default function SeatSelection() {
 
         if (data.success) {
           setFlightData(data.data.vuelo);
+          setSeatsData(data.data.asientos);
           
           // Extraer asientos ocupados y bloqueados
           const ocupados = data.data.asientos
@@ -73,23 +78,85 @@ export default function SeatSelection() {
 
   const handleSeatSelect = (seat: string) => {
     setSelectedSeat(seat);
+    
+    // Buscar el ID del asiento seleccionado
+    const seatObj = seatsData.find(s => s.numero === seat);
+    if (seatObj) {
+      setSelectedSeatId(seatObj._id);
+    }
   };
 
   const handleSubmit = async () => {
-    if (!selectedSeat) {
+    if (!selectedSeat || !selectedSeatId) {
       alert('Por favor selecciona un asiento');
       return;
     }
 
-    // Aquí irá la lógica para crear la reserva
-    console.log('Crear reserva:', {
-      vueloId,
-      asiento: selectedSeat,
-      pasajero: formData,
-    });
+    // Validar formulario
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.documentNumber) {
+      alert('Por favor completa todos los campos del formulario');
+      return;
+    }
 
-    // Por ahora, navegamos a una página de confirmación (la crearemos después)
-    alert('¡Reserva creada! (funcionalidad pendiente de implementar)');
+    try {
+      setSubmitting(true);
+
+      // Obtener token (asumiendo que lo tienes en localStorage)
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        alert('Debes iniciar sesión para hacer una reserva');
+        navigate('/login');
+        return;
+      }
+
+      // Crear reserva en el backend
+      const response = await fetch('/api/reservas', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          vueloId: vueloId,
+          asientoId: selectedSeatId,
+          pasajero: {
+            nombre: formData.firstName,
+            apellido: formData.lastName,
+            email: formData.email,
+            telefono: formData.phone,
+            tipoDocumento: formData.documentType,
+            numeroDocumento: formData.documentNumber
+          }
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Error al crear la reserva');
+      }
+
+      if (data.success) {
+        // Guardar ID de reserva para la siguiente página
+        const reservaId = data.data._id;
+        
+        // Navegar a página de pago (la crearemos después)
+        alert(`¡Reserva creada exitosamente! Código: ${data.data.codigoReserva}\nTienes 15 minutos para completar el pago.`);
+        
+        // Por ahora, redirigir a la página de búsqueda
+        // TODO: Crear página de checkout/pago
+        navigate(`/reservas/${reservaId}/pago`);
+      } else {
+        throw new Error(data.message || 'Error al crear la reserva');
+      }
+    } catch (err) {
+      const error = err as Error;
+      console.error('Error creating booking:', error);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -132,8 +199,12 @@ export default function SeatSelection() {
       <FlightInfo
         from={flightData.origen?.codigo || 'CDMX'}
         to={flightData.destino?.codigo || 'MXL'}
-        date="15 de Diciembre, 2024"
-        time="14:30 - 16:45"
+        date={new Date(flightData.fechaSalida).toLocaleDateString('es-MX', { 
+          day: 'numeric', 
+          month: 'long', 
+          year: 'numeric' 
+        })}
+        time={`${flightData.horaSalida} - ${flightData.horaLlegada}`}
         duration={flightData.duracion || '2h 15m'}
         price={`$${flightData.precio?.toLocaleString() || '2,450'}`}
         flightNumber={flightData.numeroVuelo || 'AM 1234'}
@@ -159,6 +230,13 @@ export default function SeatSelection() {
               flightPrice={`$${flightData.precio?.toLocaleString() || '2,450'}`}
               onSubmit={handleSubmit}
             />
+            
+            {submitting && (
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                <p className="text-sm text-blue-600">Creando reserva...</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
