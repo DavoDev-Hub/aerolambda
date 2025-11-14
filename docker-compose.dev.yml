@@ -4,7 +4,7 @@ services:
   mongo:
     image: mongo:7.0
     container_name: aerolambda-mongo
-    restart: unless-stopped  # Cambio aquí
+    restart: always
     ports:
       - "27017:27017"
     environment:
@@ -24,45 +24,24 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: aerolambda-backend
-    restart: unless-stopped  # Cambio aquí
+    restart: always
     ports:
       - "5000:5000"
     environment:
       PORT: 5000
-      NODE_ENV: production
+      NODE_ENV: development
       MONGODB_URI: mongodb://mongo:27017/aerolambda
       JWT_SECRET: ${JWT_SECRET:-aerolambda_jwt_secret_change_in_production}
       JWT_EXPIRES_IN: 7d
-      EMAIL_HOST: smtp.mailtrap.io
-      EMAIL_PORT: 2525
-      EMAIL_USER: usuario_simulado
-      EMAIL_PASS: password_simulado
-      EMAIL_FROM: noreply@aerolambda.com
-      CORS_ORIGIN: http://localhost:3000
+      CORS_ORIGIN: http://localhost:5173
     depends_on:
       mongo:
         condition: service_healthy
     networks:
       - aerolambda-network
     volumes:
+      - ./backend/src:/app/src
       - /app/node_modules
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: aerolambda-frontend
-    restart: unless-stopped  # Cambio aquí
-    ports:
-      - "3000:80"
-    depends_on:
-      - backend
-    networks:
-      - aerolambda-network
-    environment:
-      - VITE_API_URL=http://localhost:5000
-    stdin_open: true  # Agregar esto
-    tty: true         # Agregar esto
 
 volumes:
   mongo-data:
