@@ -4,6 +4,8 @@ import FlightSearchResults from '@/pages/FlightSearchResults';
 import SeatSelection from '@/pages/SeatSelection';
 import AuthPage from '@/pages/AuthPage';
 import CheckoutPage from '@/pages/CheckoutPage';
+import ConfirmationPage from '@/pages/ConfirmationPage';
+import MyBookingsPage from '@/pages/MyBookingsPage';
 
 function App() {
   return (
@@ -14,6 +16,8 @@ function App() {
         <Route path="/vuelos/:vueloId/asientos" element={<SeatSelection />} />
         <Route path="/login" element={<AuthPage />} />
         <Route path="/reservas/:reservaId/pago" element={<CheckoutPage />} />
+        <Route path="/reservas/:reservaId/confirmacion" element={<ConfirmationPage />} />
+        <Route path="/mis-reservas" element={<MyBookingsPage />} />
       </Routes>
     </BrowserRouter>
   );
