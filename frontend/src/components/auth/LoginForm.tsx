@@ -70,11 +70,18 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         localStorage.setItem('token', data.data.token);
         localStorage.setItem('user', JSON.stringify(data.data.usuario));
 
-        // Redirigir o ejecutar callback
+        // ✅ REDIRECCIÓN SEGÚN ROL
+        const userRole = data.data.usuario.rol;
+
         if (onSuccess) {
           onSuccess();
         } else {
-          navigate('/');
+          // Redirigir según el rol
+          if (userRole === 'admin') {
+            navigate('/admin');
+          } else {
+            navigate('/');
+          }
         }
       } else {
         throw new Error(data.message || 'Error al iniciar sesión');
@@ -93,6 +100,16 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       {apiError && (
         <div className="p-3 rounded-md bg-red-50 border border-red-200">
           <p className="text-sm text-red-600">{apiError}</p>
+        </div>
+      )}
+
+      {/* Indicador de cuenta admin */}
+      {formData.email && (formData.email.includes('admin') || formData.email.includes('administrador')) && (
+        <div className="p-3 rounded-md bg-blue-50 border border-blue-200 flex items-center gap-2">
+          <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+          <p className="text-sm text-blue-700 font-medium">
+            Iniciando sesión como administrador
+          </p>
         </div>
       )}
 

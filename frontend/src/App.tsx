@@ -1,23 +1,86 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import LandingPage from '@/pages/LandingPage';
-import FlightSearchResults from '@/pages/FlightSearchResults';
-import SeatSelection from '@/pages/SeatSelection';
-import AuthPage from '@/pages/AuthPage';
-import CheckoutPage from '@/pages/CheckoutPage';
-import ConfirmationPage from '@/pages/ConfirmationPage';
-import MyBookingsPage from '@/pages/MyBookingsPage';
+import LandingPage from './pages/LandingPage';
+import FlightSearchResults from './pages/FlightSearchResults';
+import SeatSelection from './pages/SeatSelection';
+import AuthPage from './pages/AuthPage';
+import CheckoutPage from './pages/CheckoutPage';
+import ConfirmationPage from './pages/ConfirmationPage';
+import MyBookingsPage from './pages/MyBookingsPage';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminFlights from './pages/admin/AdminFlights';
+import AdminReservations from './pages/admin/AdminReservations';
+import AdminReports from './pages/admin/AdminReports';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Rutas públicas */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/vuelos/buscar" element={<FlightSearchResults />} />
         <Route path="/vuelos/:vueloId/asientos" element={<SeatSelection />} />
         <Route path="/login" element={<AuthPage />} />
-        <Route path="/reservas/:reservaId/pago" element={<CheckoutPage />} />
-        <Route path="/reservas/:reservaId/confirmacion" element={<ConfirmationPage />} />
-        <Route path="/mis-reservas" element={<MyBookingsPage />} />
+        
+        {/* Rutas de cliente (protegidas) */}
+        <Route 
+          path="/reservas/:reservaId/pago" 
+          element={
+            <ProtectedRoute>
+              <CheckoutPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/reservas/:reservaId/confirmacion" 
+          element={
+            <ProtectedRoute>
+              <ConfirmationPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/mis-reservas" 
+          element={
+            <ProtectedRoute>
+              <MyBookingsPage />
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Rutas de admin (protegidas y solo para admin) */}
+        <Route 
+          path="/admin" 
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/vuelos" 
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminFlights />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/reservas" 
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminReservations />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/reportes" 
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminReports />
+            </ProtectedRoute>
+          } 
+        />
       </Routes>
     </BrowserRouter>
   );
