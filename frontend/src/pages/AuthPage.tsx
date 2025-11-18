@@ -2,6 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { RegisterForm } from '@/components/auth/RegisterForm';
 import { Plane } from 'lucide-react';
+import loginImage from '@/utils/login-image.png'
 
 export default function AuthPage() {
   return (
@@ -42,16 +43,26 @@ export default function AuthPage() {
       </div>
 
       {/* Right side - Image/Gradient */}
-      <div className="hidden lg:block lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-primary via-accent to-primary">
-        <div className="absolute inset-0 bg-black/10" />
-        <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-transparent to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 p-12 text-primary-foreground">
-          <h2 className="text-4xl font-bold mb-4">Vuela hacia tus sueños</h2>
-          <p className="text-xl text-primary-foreground/90">
-            Conectamos México con el mundo. Experiencias inolvidables comienzan aquí.
-          </p>
-        </div>
-      </div>
+      {/* Right side - Image/Gradient */}
+  <div className="hidden lg:block lg:w-1/2 relative overflow-hidden">
+    {/* Imagen de fondo */}
+    <div
+      className="absolute inset-0 bg-cover bg-center"
+      style={{ backgroundImage: `url(${loginImage})` }}
+    />
+
+    {/* Overlays para oscurecer y dar gradient */}
+    <div className="absolute inset-0 bg-black/10" />
+    <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-transparent to-transparent" />
+
+    {/* Texto */}
+    <div className="absolute bottom-0 left-0 right-0 p-12 text-primary-foreground">
+      <h2 className="text-4xl font-bold mb-4">Vuela hacia tus sueños</h2>
+      <p className="text-xl text-primary-foreground/90">
+        Conectamos México con el mundo. Experiencias inolvidables comienzan aquí.
+      </p>
+    </div>
+  </div>
     </div>
   );
 }
