@@ -173,3 +173,128 @@ export const perfil = async (req: Request, res: Response): Promise<void> => {
     });
   }
 };
+
+// Actualizar perfil del usuario autenticado
+export const actualizarPerfil = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.usuario?.id;
+    const { nombre, apellido, telefono } = req.body;
+
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        message: 'No autenticado'
+      });
+      return;
+    }
+
+    // Buscar usuario
+    const usuario = await User.findById(userId);
+    
+    if (!usuario) {
+      res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+      return;
+    }
+
+    // Actualizar campos permitidos
+    if (nombre) usuario.nombre = nombre;
+    if (apellido) usuario.apellido = apellido;
+    if (telefono !== undefined) usuario.telefono = telefono;
+
+    await usuario.save();
+
+    res.json({
+      success: true,
+      message: 'Perfil actualizado exitosamente',
+      data: {
+        id: usuario._id,
+        nombre: usuario.nombre,
+        apellido: usuario.apellido,
+        email: usuario.email,
+        telefono: usuario.telefono,
+        rol: usuario.rol
+      }
+    });
+  } catch (error: any) {
+    console.error('Error al actualizar perfil:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al actualizar perfil',
+      error: error.message
+    });
+  }
+};
+
+// Cambiar contraseña del usuario autenticado
+export const cambiarPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.usuario?.id;
+    const { passwordActual, passwordNuevo } = req.body;
+
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        message: 'No autenticado'
+      });
+      return;
+    }
+
+    // Validar que se proporcionen ambos passwords
+    if (!passwordActual || !passwordNuevo) {
+      res.status(400).json({
+        success: false,
+        message: 'Se requiere la contraseña actual y la nueva contraseña'
+      });
+      return;
+    }
+
+    // Validar longitud de nueva contraseña
+    if (passwordNuevo.length < 6) {
+      res.status(400).json({
+        success: false,
+        message: 'La nueva contraseña debe tener al menos 6 caracteres'
+      });
+      return;
+    }
+
+    // Buscar usuario con password
+    const usuario = await User.findById(userId).select('+password');
+    
+    if (!usuario) {
+      res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+      return;
+    }
+
+    // Verificar contraseña actual
+    const passwordCorrecto = await usuario.compararPassword(passwordActual);
+    if (!passwordCorrecto) {
+      res.status(401).json({
+        success: false,
+        message: 'La contraseña actual es incorrecta'
+      });
+      return;
+    }
+
+    // Actualizar contraseña (el middleware pre-save la hasheará automáticamente)
+    usuario.password = passwordNuevo;
+    await usuario.save();
+
+    res.json({
+      success: true,
+      message: 'Contraseña actualizada exitosamente'
+    });
+  } catch (error: any) {
+    console.error('Error al cambiar contraseña:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al cambiar contraseña',
+      error: error.message
+    });
+  }
+};
