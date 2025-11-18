@@ -11,6 +11,7 @@ import AdminFlights from './pages/admin/AdminFlights';
 import AdminReservations from './pages/admin/AdminReservations';
 import AdminReports from './pages/admin/AdminReports';
 import ProtectedRoute from './components/ProtectedRoute';
+import ProfilePage from './pages/ProfilePage';
 
 function App() {
   return (
@@ -23,6 +24,17 @@ function App() {
         <Route path="/login" element={<AuthPage />} />
         
         {/* Rutas de cliente (protegidas) */}
+        import ProfilePage from './pages/ProfilePage';
+
+// En las rutas:
+        <Route 
+          path="/perfil" 
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          } 
+        />
         <Route 
           path="/reservas/:reservaId/pago" 
           element={
