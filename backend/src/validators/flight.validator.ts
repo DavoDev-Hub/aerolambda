@@ -52,7 +52,15 @@ export const crearVueloSchema = z.object({
     
     duracion: z
       .string()
-      .regex(/^\d{1,2}h\s\d{1,2}m$/, 'Formato de duración inválido (ej: 2h 30m)'),
+      .regex(/^\d{1,2}h\s*\d{0,2}m?$|^\d{1,2}h$|^\d{1,2}m$/, 'Formato de duración inválido (ej: 2h 30m, 5h, 45m)')
+      .transform(val => {
+        // Normalizar el formato para que siempre tenga "h" y "m" con espacio
+        const match = val.match(/(\d+)h?\s*(\d+)?m?/i);
+        if (!match) return val;
+        const horas = match[1] || '0';
+        const minutos = match[2] || '0';
+        return `${horas}h ${minutos}m`;
+      }),
     
     precio: z
       .number()
@@ -65,8 +73,13 @@ export const crearVueloSchema = z.object({
       .min(1, 'La capacidad debe ser al menos 1')
       .max(300, 'La capacidad máxima es 300'),
     
+    estado: z
+      .enum(['programado', 'en_vuelo', 'completado', 'cancelado', 'retrasado'])
+      .optional()
+      .default('programado'),
+    
     tipoVuelo: z
-      .enum(['directo', '1_escala', '2+_escalas'])
+      .enum(['directo', '1_escala', '2_escalas', '2+_escalas'])
       .optional()
       .default('directo')
   })
@@ -84,15 +97,15 @@ export const actualizarVueloSchema = z.object({
     aerolinea: z.string().min(2).optional(),
     
     origen: z.object({
-      ciudad: z.string().min(2).optional(),
-      codigo: z.string().length(3).transform(val => val.toUpperCase()).optional(),
-      aeropuerto: z.string().min(5).optional()
+      ciudad: z.string().min(2),
+      codigo: z.string().length(3).transform(val => val.toUpperCase()),
+      aeropuerto: z.string().min(5)
     }).optional(),
     
     destino: z.object({
-      ciudad: z.string().min(2).optional(),
-      codigo: z.string().length(3).transform(val => val.toUpperCase()).optional(),
-      aeropuerto: z.string().min(5).optional()
+      ciudad: z.string().min(2),
+      codigo: z.string().length(3).transform(val => val.toUpperCase()),
+      aeropuerto: z.string().min(5)
     }).optional(),
     
     fechaSalida: z.string().refine(
@@ -117,16 +130,23 @@ export const actualizarVueloSchema = z.object({
     
     duracion: z
       .string()
-      .regex(/^\d{1,2}h\s\d{1,2}m$/)
+      .regex(/^\d{1,2}h\s*\d{0,2}m?$|^\d{1,2}h$|^\d{1,2}m$/)
+      .transform(val => {
+        const match = val.match(/(\d+)h?\s*(\d+)?m?/i);
+        if (!match) return val;
+        const horas = match[1] || '0';
+        const minutos = match[2] || '0';
+        return `${horas}h ${minutos}m`;
+      })
       .optional(),
     
     precio: z.number().positive().max(100000).optional(),
     
     capacidadTotal: z.number().int().min(1).max(300).optional(),
     
-    estado: z.enum(['programado', 'en_vuelo', 'completado', 'cancelado']).optional(),
+    estado: z.enum(['programado', 'en_vuelo', 'completado', 'cancelado', 'retrasado']).optional(),
     
-    tipoVuelo: z.enum(['directo', '1_escala', '2+_escalas']).optional()
+    tipoVuelo: z.enum(['directo', '1_escala', '2_escalas', '2+_escalas']).optional()
   })
 });
 
@@ -139,7 +159,7 @@ export const buscarVuelosSchema = z.object({
       (date) => !isNaN(Date.parse(date)),
       'Fecha inválida'
     ).optional(),
-    estado: z.enum(['programado', 'en_vuelo', 'completado', 'cancelado']).optional()
+    estado: z.enum(['programado', 'en_vuelo', 'completado', 'cancelado', 'retrasado']).optional()
   })
 });
 

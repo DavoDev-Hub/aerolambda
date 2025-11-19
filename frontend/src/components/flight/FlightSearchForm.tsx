@@ -54,16 +54,30 @@ const handleSubmit = (e: React.FormEvent) => {
     return;
   }
 
-  // Navegar a resultados de búsqueda con los parámetros (INCLUIR PASAJEROS)
+  // Si es viaje redondo, validar fecha de vuelta
+  if (formData.isRoundTrip && !formData.returnDate) {
+    alert('Por favor selecciona la fecha de vuelta');
+    return;
+  }
+
+  // Navegar a resultados de búsqueda con los parámetros
   const searchParams = new URLSearchParams({
     origen: formData.origin,
     destino: formData.destination,
     fecha: formData.departureDate,
-    pasajeros: formData.passengers.toString(), // ← AGREGAR ESTA LÍNEA
+    pasajeros: formData.passengers.toString(),
+    viaje: formData.isRoundTrip ? 'redondo' : 'sencillo', // ← AGREGAR ESTO
   });
+
+  // Si es viaje redondo, agregar fecha de vuelta
+  if (formData.isRoundTrip && formData.returnDate) {
+    searchParams.append('fechaVuelta', formData.returnDate);
+  }
 
   navigate(`/vuelos/buscar?${searchParams.toString()}`);
 };
+
+
   return (
     <section className="w-full bg-background py-12 md:py-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">

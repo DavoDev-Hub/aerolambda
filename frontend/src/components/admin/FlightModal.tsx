@@ -110,7 +110,6 @@ export default function FlightModal({ isOpen, onClose, onSave, flight, mode }: F
         tipoVuelo: flight.tipoVuelo,
       });
     } else {
-      // Reset form for create mode
       setFormData({
         numeroVuelo: '',
         aerolinea: 'AeroLambda',
@@ -128,6 +127,60 @@ export default function FlightModal({ isOpen, onClose, onSave, flight, mode }: F
       });
     }
   }, [flight, mode, isOpen]);
+
+  // Función para calcular fecha y hora de llegada
+  const calcularLlegada = (fechaSalida: string, horaSalida: string, duracion: string) => {
+    if (!fechaSalida || !horaSalida || !duracion) return { fechaLlegada: '', horaLlegada: '' };
+
+    try {
+      // Parsear la duración (formato: "5h 30m" o "2h" o "45m")
+      const duracionMatch = duracion.match(/(\d+)h?\s*(\d+)?m?/i);
+      if (!duracionMatch) return { fechaLlegada: '', horaLlegada: '' };
+
+      const horas = parseInt(duracionMatch[1] || '0');
+      const minutos = parseInt(duracionMatch[2] || '0');
+
+      // Crear fecha/hora de salida
+      const [year, month, day] = fechaSalida.split('-').map(Number);
+      const [hours, mins] = horaSalida.split(':').map(Number);
+      
+      const fechaHoraSalida = new Date(year, month - 1, day, hours, mins);
+
+      // Agregar la duración
+      fechaHoraSalida.setHours(fechaHoraSalida.getHours() + horas);
+      fechaHoraSalida.setMinutes(fechaHoraSalida.getMinutes() + minutos);
+
+      // Formatear fecha de llegada (YYYY-MM-DD)
+      const fechaLlegada = fechaHoraSalida.toISOString().split('T')[0];
+
+      // Formatear hora de llegada (HH:MM)
+      const horaLlegada = fechaHoraSalida.toTimeString().slice(0, 5);
+
+      return { fechaLlegada, horaLlegada };
+    } catch (error) {
+      console.error('Error calculando llegada:', error);
+      return { fechaLlegada: '', horaLlegada: '' };
+    }
+  };
+
+  // Efecto para calcular automáticamente la llegada cuando cambian los datos
+  useEffect(() => {
+    if (formData.fechaSalida && formData.horaSalida && formData.duracion) {
+      const { fechaLlegada, horaLlegada } = calcularLlegada(
+        formData.fechaSalida,
+        formData.horaSalida,
+        formData.duracion
+      );
+
+      if (fechaLlegada && horaLlegada) {
+        setFormData(prev => ({
+          ...prev,
+          fechaLlegada,
+          horaLlegada,
+        }));
+      }
+    }
+  }, [formData.fechaSalida, formData.horaSalida, formData.duracion]);
 
   const handleOrigenChange = (codigo: string) => {
     const ciudad = ciudadesMexicanas.find(c => c.codigo === codigo);
@@ -182,7 +235,7 @@ export default function FlightModal({ isOpen, onClose, onSave, flight, mode }: F
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto m-4">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h2 className="text-2xl font-bold text-gray-900">
             {mode === 'create' ? 'Crear Nuevo Vuelo' : 'Editar Vuelo'}
           </h2>
@@ -260,7 +313,7 @@ export default function FlightModal({ isOpen, onClose, onSave, flight, mode }: F
             </div>
           </div>
 
-          {/* Fechas y Horas */}
+          {/* Fechas y Horas de Salida */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="fechaSalida">Fecha de Salida *</Label>
@@ -284,44 +337,53 @@ export default function FlightModal({ isOpen, onClose, onSave, flight, mode }: F
                 required
               />
             </div>
+          </div>
 
+          {/* Duración */}
+          <div>
+            <Label htmlFor="duracion">Duración del vuelo *</Label>
+            <Input
+              id="duracion"
+              value={formData.duracion}
+              onChange={(e) => setFormData({ ...formData, duracion: e.target.value })}
+              placeholder="Ej: 5h 30m, 2h, 45m"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Formato: "5h 30m" o "2h" o "45m". La fecha y hora de llegada se calculan automáticamente.
+            </p>
+          </div>
+
+          {/* Fechas y Horas de Llegada (calculadas automáticamente) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-blue-50 p-4 rounded-lg">
             <div>
-              <Label htmlFor="fechaLlegada">Fecha de Llegada *</Label>
+              <Label htmlFor="fechaLlegada">Fecha de Llegada (calculada)</Label>
               <Input
                 id="fechaLlegada"
                 type="date"
                 value={formData.fechaLlegada}
-                onChange={(e) => setFormData({ ...formData, fechaLlegada: e.target.value })}
-                min={formData.fechaSalida || new Date().toISOString().split('T')[0]}
-                required
+                readOnly
+                className="bg-white"
               />
             </div>
 
             <div>
-              <Label htmlFor="horaLlegada">Hora de Llegada *</Label>
+              <Label htmlFor="horaLlegada">Hora de Llegada (calculada)</Label>
               <Input
                 id="horaLlegada"
                 type="time"
                 value={formData.horaLlegada}
-                onChange={(e) => setFormData({ ...formData, horaLlegada: e.target.value })}
-                required
+                readOnly
+                className="bg-white"
               />
             </div>
+            <p className="text-xs text-blue-600 col-span-2">
+              ℹ️ Estos campos se calculan automáticamente basándose en la fecha/hora de salida y la duración del vuelo.
+            </p>
           </div>
 
-          {/* Duración, Precio y Capacidad */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="duracion">Duración *</Label>
-              <Input
-                id="duracion"
-                value={formData.duracion}
-                onChange={(e) => setFormData({ ...formData, duracion: e.target.value })}
-                placeholder="5h 30m"
-                required
-              />
-            </div>
-
+          {/* Precio y Capacidad */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="precio">Precio (MXN) *</Label>
               <Input
