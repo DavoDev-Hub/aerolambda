@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/flight/Header';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -8,15 +8,40 @@ import { Label } from '@/components/ui/Label';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Shield, CreditCard, Calendar, Lock, Plane, MapPin, Clock, User } from 'lucide-react';
 
+interface Reserva {
+  _id: string;
+  vuelo: {
+    numeroVuelo: string;
+    aerolinea: string;
+    origen: { ciudad: string; codigo: string };
+    destino: { ciudad: string; codigo: string };
+    fechaSalida: string;
+    horaSalida: string;
+    fechaLlegada: string;
+    horaLlegada: string;
+    precio: number;
+  };
+  asiento: {
+    numero: string;
+    tipo: string;
+  };
+  pasajero: {
+    nombre: string;
+    apellido: string;
+  };
+  precioTotal: number;
+  estado: string;
+}
+
 export default function CheckoutPage() {
   const { reservaId } = useParams<{ reservaId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [reservaData, setReservaData] = useState<any>(null);
+  const [reservas, setReservas] = useState<Reserva[]>([]);
 
   const [paymentData, setPaymentData] = useState({
     cardNumber: '',
@@ -26,8 +51,12 @@ export default function CheckoutPage() {
     acceptTerms: false,
   });
 
+  // IDs de todas las reservas (puede venir del location.state o ser solo una)
+  const reservaIds = location.state?.reservaIds || [reservaId];
+  const precioTotalState = location.state?.precioTotal;
+
   useEffect(() => {
-    const fetchReserva = async () => {
+    const fetchReservas = async () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('token');
@@ -37,36 +66,37 @@ export default function CheckoutPage() {
           return;
         }
 
-        const response = await fetch(`/api/reservas/${reservaId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        // Cargar todas las reservas
+        const reservasPromises = reservaIds.map((id: string) =>
+          fetch(`/api/reservas/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }).then(res => res.json())
+        );
 
-        const data = await response.json();
+        const reservasData = await Promise.all(reservasPromises);
+        
+        const reservasValidas = reservasData
+          .filter(data => data.success)
+          .map(data => data.data);
 
-        if (!response.ok) {
-          throw new Error(data.message || 'Error al cargar la reserva');
+        if (reservasValidas.length === 0) {
+          throw new Error('No se encontraron las reservas');
         }
 
-        if (data.success) {
-          setReservaData(data.data);
-        } else {
-          throw new Error(data.message || 'Error al cargar la reserva');
-        }
+        setReservas(reservasValidas);
       } catch (err) {
         const error = err as Error;
-        console.error('Error fetching booking:', error);
+        console.error('Error fetching bookings:', error);
         setError(error.message);
       } finally {
         setLoading(false);
       }
     };
 
-    if (reservaId) {
-      fetchReserva();
+    if (reservaIds && reservaIds.length > 0) {
+      fetchReservas();
     }
-  }, [reservaId, navigate]);
+  }, [reservaIds, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,29 +110,33 @@ export default function CheckoutPage() {
       setSubmitting(true);
       const token = localStorage.getItem('token');
 
-      const response = await fetch('/api/reservas/confirmar-pago', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          reservaId: reservaId,
-          metodoPago: 'Tarjeta (Simulado)'
-        })
-      });
+      // Confirmar pago para todas las reservas
+      const confirmPromises = reservaIds.map((id: string) =>
+        fetch('/api/reservas/confirmar-pago', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            reservaId: id,
+            metodoPago: 'Tarjeta de crédito (Simulado)',
+          }),
+        }).then(res => res.json())
+      );
 
-      const data = await response.json();
+      const results = await Promise.all(confirmPromises);
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Error al confirmar el pago');
-      }
+      const allSuccess = results.every(result => result.success);
 
-      if (data.success) {
-        // Navegar a página de confirmación
-        navigate(`/reservas/${reservaId}/confirmacion`);
+      if (allSuccess) {
+        // Navegar a confirmación
+        navigate(`/reservas/${reservaIds[0]}/confirmacion`, {
+          state: { reservaIds }
+        });
       } else {
-        throw new Error(data.message || 'Error al confirmar el pago');
+        const failedResults = results.filter(r => !r.success);
+        throw new Error(failedResults[0]?.message || 'Error al confirmar algunas reservas');
       }
     } catch (err) {
       const error = err as Error;
@@ -127,13 +161,13 @@ export default function CheckoutPage() {
     );
   }
 
-  if (error || !reservaData) {
+  if (error || reservas.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
-            <p className="text-red-600 mb-4">❌ {error || 'No se pudo cargar la reserva'}</p>
+            <p className="text-red-600 mb-4">❌ {error || 'No se pudieron cargar las reservas'}</p>
             <Button onClick={() => navigate('/')}>
               Volver al inicio
             </Button>
@@ -143,9 +177,11 @@ export default function CheckoutPage() {
     );
   }
 
-  const vuelo = reservaData.vuelo;
-  const asiento = reservaData.asiento;
-  // const pasajero = reservaData.pasajero;
+  const primeraReserva = reservas[0];
+  const vuelo = primeraReserva.vuelo;
+  const precioBase = precioTotalState || reservas.reduce((sum, r) => sum + r.precioTotal, 0);
+  const impuestos = Math.round(precioBase * 0.16); // 16% de impuestos
+  const total = precioBase + impuestos;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary via-blue-700 to-blue-900">
@@ -156,7 +192,6 @@ export default function CheckoutPage() {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-center gap-2 text-sm text-gray-700">
             <Shield className="w-5 h-5 text-green-600" />
-            <span className="font-medium">Tu pago está protegido con encriptación SSL de 256 bits</span>
           </div>
         </div>
       </div>
@@ -334,20 +369,38 @@ export default function CheckoutPage() {
 
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <User className="w-4 h-4" />
-                  <span>1 pasajero • Asiento {asiento.numero}</span>
+                  <span>
+                    {reservas.length} pasajero{reservas.length > 1 ? 's' : ''} • Asiento{reservas.length > 1 ? 's' : ''}{' '}
+                    {reservas.map(r => r.asiento.numero).join(', ')}
+                  </span>
                 </div>
               </div>
+
+              {/* Pasajeros (si son múltiples) */}
+              {reservas.length > 1 && (
+                <div className="mb-6 pb-6 border-t border-gray-200 pt-4">
+                  <h4 className="font-semibold text-sm text-gray-900 mb-3">Pasajeros:</h4>
+                  <div className="space-y-2">
+                    {reservas.map((reserva, index) => (
+                      <div key={reserva._id} className="text-xs text-gray-600">
+                        <span className="font-medium">Pasajero {index + 1}:</span>{' '}
+                        {reserva.pasajero.nombre} {reserva.pasajero.apellido} - Asiento {reserva.asiento.numero}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Price Breakdown */}
               <div className="border-t border-gray-200 pt-4 space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Precio base</span>
-                  <span className="font-semibold">${vuelo.precio?.toLocaleString()} MXN</span>
+                  <span className="font-semibold">${precioBase.toLocaleString()} MXN</span>
                 </div>
 
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Impuestos y cargos</span>
-                  <span className="font-semibold">$350 MXN</span>
+                  <span className="font-semibold">${impuestos.toLocaleString()} MXN</span>
                 </div>
 
                 <div className="flex justify-between text-sm">
@@ -358,7 +411,7 @@ export default function CheckoutPage() {
                 <div className="border-t border-gray-200 pt-3 flex justify-between items-center">
                   <span className="text-lg font-bold text-gray-900">Total</span>
                   <span className="text-2xl font-bold text-primary">
-                    ${(vuelo.precio + 350)?.toLocaleString()}
+                    ${total.toLocaleString()}
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 text-right">MXN</p>
@@ -370,7 +423,7 @@ export default function CheckoutPage() {
                 <ul className="space-y-1 text-xs text-gray-600">
                   <li>• Cancelación gratuita hasta 24h antes</li>
                   <li>• Cambios permitidos con cargo adicional</li>
-                  <li>• Reembolso del 80% en canciones 48h antes</li>
+                  <li>• Reembolso del 80% en canciones +6h antes</li>
                 </ul>
               </div>
             </Card>

@@ -45,25 +45,25 @@ export default function FlightSearchForm() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+const handleSubmit = (e: React.FormEvent) => {
+  e.preventDefault();
 
-    // Validaciones básicas
-    if (!formData.origin || !formData.destination || !formData.departureDate) {
-      alert('Por favor completa todos los campos requeridos');
-      return;
-    }
+  // Validaciones básicas
+  if (!formData.origin || !formData.destination || !formData.departureDate) {
+    alert('Por favor completa todos los campos requeridos');
+    return;
+  }
 
-    // Navegar a resultados de búsqueda con los parámetros
-    const searchParams = new URLSearchParams({
-      origen: formData.origin,
-      destino: formData.destination,
-      fecha: formData.departureDate,
-    });
+  // Navegar a resultados de búsqueda con los parámetros (INCLUIR PASAJEROS)
+  const searchParams = new URLSearchParams({
+    origen: formData.origin,
+    destino: formData.destination,
+    fecha: formData.departureDate,
+    pasajeros: formData.passengers.toString(), // ← AGREGAR ESTA LÍNEA
+  });
 
-    navigate(`/vuelos/buscar?${searchParams.toString()}`);
-  };
-
+  navigate(`/vuelos/buscar?${searchParams.toString()}`);
+};
   return (
     <section className="w-full bg-background py-12 md:py-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">

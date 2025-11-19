@@ -4,11 +4,38 @@ import Seat from '../models/Seat';
 import Flight from '../models/Flight';
 import { Types } from 'mongoose';
 
-// Crear una reserva (PRIVADO - Cliente)
 export const crearReserva = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { vueloId, asientoId, pasajero } = req.body;
+    const { vueloId, asientoId, asientos, pasajero, pasajeros } = req.body;
     const usuarioId = req.usuario?.id;
+
+    // Determinar si es una reserva simple o múltiple
+    const esReservaMultiple = Array.isArray(asientos) && Array.isArray(pasajeros);
+    
+    // Validaciones básicas
+    if (esReservaMultiple) {
+      if (asientos.length !== pasajeros.length) {
+        res.status(400).json({
+          success: false,
+          message: 'El número de asientos debe coincidir con el número de pasajeros'
+        });
+        return;
+      }
+
+      if (asientos.length === 0) {
+        res.status(400).json({
+          success: false,
+          message: 'Debe proporcionar al menos un asiento y pasajero'
+        });
+        return;
+      }
+    } else if (!asientoId || !pasajero) {
+      res.status(400).json({
+        success: false,
+        message: 'Datos de reserva incompletos'
+      });
+      return;
+    }
 
     // Verificar que el vuelo exista y esté disponible
     const vuelo = await Flight.findById(vueloId);
@@ -28,73 +55,126 @@ export const crearReserva = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    if (vuelo.asientosDisponibles <= 0) {
+    const numReservas = esReservaMultiple ? asientos.length : 1;
+    
+    if (vuelo.asientosDisponibles < numReservas) {
       res.status(400).json({
         success: false,
-        message: 'No hay asientos disponibles en este vuelo'
+        message: `No hay suficientes asientos disponibles. Disponibles: ${vuelo.asientosDisponibles}`
       });
       return;
     }
 
-    // Verificar que el asiento exista y esté disponible o bloqueado
-    const asiento = await Seat.findById(asientoId);
-    if (!asiento) {
+    // Procesar reserva simple
+    if (!esReservaMultiple) {
+      const asiento = await Seat.findById(asientoId);
+      if (!asiento) {
+        res.status(404).json({
+          success: false,
+          message: 'Asiento no encontrado'
+        });
+        return;
+      }
+
+      if (asiento.estado === 'ocupado') {
+        res.status(400).json({
+          success: false,
+          message: 'El asiento ya está ocupado'
+        });
+        return;
+      }
+
+      // Crear la reserva
+      const nuevaReserva = await Booking.create({
+        usuario: usuarioId,
+        vuelo: vueloId,
+        asiento: asientoId,
+        pasajero,
+        precioTotal: vuelo.precio,
+        estado: 'pendiente'
+      });
+
+      // Bloquear el asiento
+      const tiempoBloqueo = 15 * 60 * 1000;
+      asiento.estado = 'bloqueado';
+      asiento.bloqueadoHasta = new Date(Date.now() + tiempoBloqueo);
+      asiento.reserva = nuevaReserva._id as Types.ObjectId;
+      await asiento.save();
+
+      const reservaCompleta = await Booking.findById(nuevaReserva._id)
+        .populate('vuelo', 'numeroVuelo origen destino fechaSalida horaSalida fechaLlegada horaLlegada')
+        .populate('asiento', 'numero fila columna tipo');
+
+      res.status(201).json({
+        success: true,
+        message: 'Reserva creada. Tienes 15 minutos para completar el pago',
+        data: reservaCompleta
+      });
+      return;
+    }
+
+    // Procesar reservas múltiples
+    // Verificar todos los asientos primero
+    const asientosObjs = await Seat.find({ _id: { $in: asientos } });
+    
+    if (asientosObjs.length !== asientos.length) {
       res.status(404).json({
         success: false,
-        message: 'Asiento no encontrado'
+        message: 'Uno o más asientos no encontrados'
       });
       return;
     }
 
-    if (asiento.estado === 'ocupado') {
+    // Verificar que todos estén disponibles
+    const asientoOcupado = asientosObjs.find(a => a.estado === 'ocupado');
+    if (asientoOcupado) {
       res.status(400).json({
         success: false,
-        message: 'El asiento ya está ocupado'
+        message: `El asiento ${asientoOcupado.numero} ya está ocupado`
       });
       return;
     }
 
-    // Verificar que no haya reserva duplicada (mismo usuario, mismo vuelo, estado confirmada)
-    const reservaDuplicada = await Booking.findOne({
-      usuario: usuarioId,
-      vuelo: vueloId,
-      estado: { $in: ['pendiente', 'confirmada'] }
-    });
+    // Crear todas las reservas
+    const reservasCreadas = [];
+    const tiempoBloqueo = 15 * 60 * 1000;
 
-    if (reservaDuplicada) {
-      res.status(400).json({
-        success: false,
-        message: 'Ya tienes una reserva activa para este vuelo'
+    for (let i = 0; i < asientos.length; i++) {
+      const nuevaReserva = await Booking.create({
+        usuario: usuarioId,
+        vuelo: vueloId,
+        asiento: asientos[i],
+        pasajero: pasajeros[i],
+        precioTotal: vuelo.precio,
+        estado: 'pendiente'
       });
-      return;
+
+      // Bloquear el asiento
+      const asiento = asientosObjs[i];
+      asiento.estado = 'bloqueado';
+      asiento.bloqueadoHasta = new Date(Date.now() + tiempoBloqueo);
+      asiento.reserva = nuevaReserva._id as Types.ObjectId;
+      await asiento.save();
+
+      reservasCreadas.push(nuevaReserva);
     }
 
-    // Crear la reserva en estado pendiente
-    const nuevaReserva = await Booking.create({
-      usuario: usuarioId,
-      vuelo: vueloId,
-      asiento: asientoId,
-      pasajero,
-      precioTotal: vuelo.precio,
-      estado: 'pendiente'
-    });
-
-    // Bloquear el asiento (15 minutos para completar el pago)
-    const tiempoBloqueo = 15 * 60 * 1000; // 15 minutos
-    asiento.estado = 'bloqueado';
-    asiento.bloqueadoHasta = new Date(Date.now() + tiempoBloqueo);
-    asiento.reserva = nuevaReserva._id as Types.ObjectId;
-    await asiento.save();
-
-    // Populate para devolver información completa
-    const reservaCompleta = await Booking.findById(nuevaReserva._id)
+    // Populate todas las reservas
+    const reservasCompletas = await Booking.find({ 
+      _id: { $in: reservasCreadas.map(r => r._id) } 
+    })
       .populate('vuelo', 'numeroVuelo origen destino fechaSalida horaSalida fechaLlegada horaLlegada')
       .populate('asiento', 'numero fila columna tipo');
 
     res.status(201).json({
       success: true,
-      message: 'Reserva creada. Tienes 15 minutos para completar el pago',
-      data: reservaCompleta
+      message: `${reservasCreadas.length} reservas creadas. Tienes 15 minutos para completar el pago`,
+      data: {
+        _id: reservasCreadas[0]._id, // ID de la primera reserva para el pago
+        reservas: reservasCompletas,
+        totalReservas: reservasCreadas.length,
+        precioTotal: vuelo.precio * reservasCreadas.length
+      }
     });
   } catch (error: any) {
     console.error('Error al crear reserva:', error);
@@ -105,7 +185,6 @@ export const crearReserva = async (req: Request, res: Response): Promise<void> =
     });
   }
 };
-
 // Confirmar pago y completar reserva (PRIVADO - Cliente)
 export const confirmarPago = async (req: Request, res: Response): Promise<void> => {
   try {

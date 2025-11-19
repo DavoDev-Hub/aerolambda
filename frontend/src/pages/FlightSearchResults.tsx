@@ -20,10 +20,11 @@ export default function FlightSearchResults() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Obtener parámetros de búsqueda
-  const origen = searchParams.get('origen') || '';
-  const destino = searchParams.get('destino') || '';
-  const fecha = searchParams.get('fecha') || '';
+// Obtener parámetros de búsqueda
+const origen = searchParams.get('origen') || '';
+const destino = searchParams.get('destino') || '';
+const fecha = searchParams.get('fecha') || '';
+const pasajeros = parseInt(searchParams.get('pasajeros') || '1'); // ← AGREGAR ESTA LÍNEA
 
   useEffect(() => {
     const fetchFlights = async () => {
@@ -108,7 +109,7 @@ export default function FlightSearchResults() {
         origin={origen}
         destination={destino}
         date={formatDate(fecha)}
-        passengers={1}
+        passengers={pasajeros}  
         onModifySearch={handleModifySearch}
       />
 
@@ -195,7 +196,11 @@ export default function FlightSearchResults() {
           {!loading && !error && sortedFlights.length > 0 && (
             <div className="space-y-4">
               {sortedFlights.map((flight) => (
-                <FlightCard key={flight._id || flight.id} flight={flight} />
+                <FlightCard 
+                  key={flight._id || flight.id} 
+                  flight={flight} 
+                  numPasajeros={pasajeros}  // ← AGREGAR ESTA PROP
+                />
               ))}
             </div>
           )}
