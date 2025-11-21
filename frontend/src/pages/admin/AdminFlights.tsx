@@ -184,7 +184,6 @@ export default function AdminFlights() {
       <div className="p-8 space-y-6">
         {/* Header con botón crear */}
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Gestión de Vuelos</h1>
           <Button 
             onClick={handleCreateClick}
             className="bg-primary text-primary-foreground flex items-center gap-2"

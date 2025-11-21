@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Checkbox } from '@/components/ui/Checkbox';
-import { Shield, CreditCard, Calendar, Lock, Plane, MapPin, Clock, User } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/Alert';
+import { Shield, CreditCard, Calendar, Lock, Plane, MapPin, Clock, User, AlertCircle } from 'lucide-react';
 
 interface Reserva {
   _id: string;
@@ -31,6 +32,7 @@ interface Reserva {
   };
   precioTotal: number;
   estado: string;
+  createdAt: string; // 🆕 Agregar fecha de creación
 }
 
 export default function CheckoutPage() {
@@ -42,6 +44,7 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reservas, setReservas] = useState<Reserva[]>([]);
+  const [tiempoRestante, setTiempoRestante] = useState<number>(0); // 🆕 Tiempo restante en segundos
 
   const [paymentData, setPaymentData] = useState({
     cardNumber: '',
@@ -54,6 +57,25 @@ export default function CheckoutPage() {
   // IDs de todas las reservas (puede venir del location.state o ser solo una)
   const reservaIds = location.state?.reservaIds || [reservaId];
   const precioTotalState = location.state?.precioTotal;
+
+  // 🆕 Función para calcular tiempo restante
+  const calcularTiempoRestante = (createdAt: string): number => {
+    const ahora = new Date().getTime();
+    const creacion = new Date(createdAt).getTime();
+    const transcurrido = ahora - creacion;
+    const limite = 15 * 60 * 1000; // 15 minutos
+    const restante = limite - transcurrido;
+    
+    if (restante <= 0) return 0;
+    return Math.floor(restante / 1000); // segundos
+  };
+
+  // 🆕 Formatear tiempo en MM:SS
+  const formatearTiempo = (segundos: number): string => {
+    const minutos = Math.floor(segundos / 60);
+    const segs = segundos % 60;
+    return `${minutos}:${segs.toString().padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     const fetchReservas = async () => {
@@ -83,6 +105,33 @@ export default function CheckoutPage() {
           throw new Error('No se encontraron las reservas');
         }
 
+        // 🆕 Verificar si alguna reserva está en estado pendiente
+        const reservasPendientes = reservasValidas.filter(r => r.estado === 'pendiente');
+        
+        if (reservasPendientes.length > 0) {
+          // Calcular tiempo restante de la primera reserva pendiente
+          const tiempo = calcularTiempoRestante(reservasPendientes[0].createdAt);
+          
+          if (tiempo <= 0) {
+            // Reserva expirada
+            setError('Esta reserva ha expirado. El tiempo límite de 15 minutos para completar el pago ha vencido. Por favor, realiza una nueva búsqueda.');
+            
+            // Opcional: Cancelar automáticamente la reserva
+            try {
+              await fetch(`/api/reservas/${reservasPendientes[0]._id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+            } catch (err) {
+              console.error('Error al cancelar reserva expirada:', err);
+            }
+            
+            return;
+          }
+          
+          setTiempoRestante(tiempo);
+        }
+
         setReservas(reservasValidas);
       } catch (err) {
         const error = err as Error;
@@ -98,8 +147,34 @@ export default function CheckoutPage() {
     }
   }, [reservaIds, navigate]);
 
+  // 🆕 Actualizar contador cada segundo
+  useEffect(() => {
+    if (tiempoRestante <= 0 || reservas.length === 0) return;
+
+    const interval = setInterval(() => {
+      setTiempoRestante((prev) => {
+        if (prev <= 1) {
+          // Tiempo agotado
+          setError('El tiempo para completar el pago ha expirado. Esta reserva será cancelada automáticamente.');
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [tiempoRestante, reservas]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 🆕 Verificar si el tiempo expiró antes de enviar
+    if (tiempoRestante <= 0) {
+      alert('El tiempo para completar el pago ha expirado. Por favor, realiza una nueva búsqueda.');
+      navigate('/');
+      return;
+    }
 
     if (!paymentData.acceptTerms) {
       alert('Debes aceptar los términos y condiciones');
@@ -166,10 +241,13 @@ export default function CheckoutPage() {
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <p className="text-red-600 mb-4">❌ {error || 'No se pudieron cargar las reservas'}</p>
-            <Button onClick={() => navigate('/')}>
-              Volver al inicio
+          <div className="text-center max-w-md">
+            <AlertCircle className="w-16 h-16 text-red-600 mx-auto mb-4" />
+            <p className="text-red-600 mb-4 text-lg font-semibold">
+              {error || 'No se pudieron cargar las reservas'}
+            </p>
+            <Button onClick={() => navigate('/')} className="mt-4">
+              Buscar nuevos vuelos
             </Button>
           </div>
         </div>
@@ -192,11 +270,32 @@ export default function CheckoutPage() {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-center gap-2 text-sm text-gray-700">
             <Shield className="w-5 h-5 text-green-600" />
+            <span>Pago seguro con encriptación SSL</span>
           </div>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* 🆕 Alert de tiempo restante */}
+        {tiempoRestante > 0 && (
+          <Alert className={`mb-6 ${tiempoRestante < 120 ? 'border-red-200 bg-red-50' : 'border-yellow-200 bg-yellow-50'}`}>
+            <div className="flex items-start gap-2">
+              <Clock className={`h-5 w-5 mt-0.5 ${tiempoRestante < 120 ? 'text-red-600' : 'text-yellow-600'}`} />
+              <AlertDescription className={tiempoRestante < 120 ? 'text-red-900' : 'text-yellow-900'}>
+                <p className="font-semibold mb-1">
+                  {tiempoRestante < 120 ? '⚠️ ¡Tiempo por agotarse!' : 'Completa tu compra'}
+                </p>
+                <p className="text-sm">
+                  Tu reserva expirará en: <span className="font-bold text-lg">{formatearTiempo(tiempoRestante)}</span>
+                </p>
+                <p className="text-xs mt-1">
+                  Los asientos serán liberados automáticamente si no completas el pago a tiempo.
+                </p>
+              </AlertDescription>
+            </div>
+          </Alert>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Payment Form */}
           <div className="lg:col-span-2">
@@ -326,9 +425,9 @@ export default function CheckoutPage() {
                 <Button
                   type="submit"
                   className="w-full h-12 text-base font-semibold"
-                  disabled={submitting || !paymentData.acceptTerms}
+                  disabled={submitting || !paymentData.acceptTerms || tiempoRestante <= 0}
                 >
-                  {submitting ? 'Procesando...' : 'Confirmar compra'}
+                  {submitting ? 'Procesando...' : tiempoRestante <= 0 ? 'Tiempo agotado' : 'Confirmar compra'}
                 </Button>
               </form>
             </Card>
@@ -423,7 +522,7 @@ export default function CheckoutPage() {
                 <ul className="space-y-1 text-xs text-gray-600">
                   <li>• Cancelación gratuita hasta 24h antes</li>
                   <li>• Cambios permitidos con cargo adicional</li>
-                  <li>• Reembolso del 80% en canciones +6h antes</li>
+                  <li>• Reembolso del 80% en cancelaciones +6h antes</li>
                 </ul>
               </div>
             </Card>

@@ -4,6 +4,7 @@ import Header from '@/components/flight/Header';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { Alert, AlertDescription } from '@/components/ui/Alert';
 import { 
   Plane, 
   Calendar, 
@@ -13,7 +14,9 @@ import {
   ArrowRight, 
   FileDown, 
   X,
-  Eye
+  Eye,
+  AlertCircle,
+  Clock
 } from 'lucide-react';
 
 type ReservationStatus = 'pendiente' | 'confirmada' | 'cancelada' | 'completada';
@@ -67,6 +70,18 @@ export default function MyBookingsPage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // 🆕 Función para calcular tiempo restante
+  const calcularTiempoRestante = (createdAt: string) => {
+    const ahora = new Date().getTime();
+    const creacion = new Date(createdAt).getTime();
+    const transcurrido = ahora - creacion;
+    const limite = 15 * 60 * 1000; // 15 minutos
+    const restante = limite - transcurrido;
+    
+    if (restante <= 0) return 0;
+    return Math.ceil(restante / (60 * 1000)); // minutos
+  };
 
   useEffect(() => {
     const fetchReservations = async () => {
@@ -146,7 +161,7 @@ export default function MyBookingsPage() {
     const flightDate = new Date(reservation.vuelo.fechaSalida);
     
     if (activeTab === 'proximos') {
-      return reservation.estado === 'confirmada' && flightDate >= now;
+      return (reservation.estado === 'confirmada' || reservation.estado === 'pendiente') && flightDate >= now;
     }
     if (activeTab === 'pasados') {
       return reservation.estado === 'completada' || (reservation.estado === 'confirmada' && flightDate < now);
@@ -231,125 +246,184 @@ export default function MyBookingsPage() {
         {/* Reservations List */}
         {filteredReservations.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2">
-            {filteredReservations.map((reservation) => (
-              <Card key={reservation._id} className="overflow-hidden border-2 transition-shadow hover:shadow-lg">
-                <div className="p-6 space-y-3 pb-4">
-                  <div className="flex items-start justify-between">
-                    <Badge className={statusColors[reservation.estado]}>
-                      {statusLabels[reservation.estado]}
-                    </Badge>
-                    <span className="text-sm font-mono text-muted-foreground">
-                      {reservation.codigoReserva}
-                    </span>
-                  </div>
+            {filteredReservations.map((reservation) => {
+              const minutos = calcularTiempoRestante(reservation.createdAt);
+              const esExpirable = reservation.estado === 'pendiente' && minutos > 0;
+              const estaExpirada = reservation.estado === 'pendiente' && minutos <= 0;
 
-                  <div className="flex items-center justify-between pt-2">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5 text-primary" />
-                      <span className="font-semibold text-foreground">
-                        {reservation.vuelo.origen.ciudad}
+              return (
+                <Card key={reservation._id} className="overflow-hidden border-2 transition-shadow hover:shadow-lg">
+                  <div className="p-6 space-y-3 pb-4">
+                    <div className="flex items-start justify-between">
+                      <Badge className={statusColors[reservation.estado]}>
+                        {statusLabels[reservation.estado]}
+                      </Badge>
+                      <span className="text-sm font-mono text-muted-foreground">
+                        {reservation.codigoReserva}
                       </span>
                     </div>
-                    <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5 text-primary" />
-                      <span className="font-semibold text-foreground">
-                        {reservation.vuelo.destino.ciudad}
-                      </span>
+
+                    {/* 🆕 Alert de tiempo restante para pendientes */}
+                    {esExpirable && (
+                      <Alert className="border-yellow-200 bg-yellow-50">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                          <AlertDescription className="text-yellow-900">
+                            <p className="font-semibold mb-1">¡Completa tu pago!</p>
+                            <div className="flex items-center gap-2 text-sm">
+                              <Clock className="h-4 w-4" />
+                              <span>
+                                Esta reserva expira en <strong>{minutos} minutos</strong>.
+                              </span>
+                            </div>
+                            <p className="text-xs mt-1">
+                              El asiento será liberado automáticamente si no completas el pago.
+                            </p>
+                          </AlertDescription>
+                        </div>
+                      </Alert>
+                    )}
+
+                    {/* 🆕 Alert de expiración para pendientes vencidos */}
+                    {estaExpirada && (
+                      <Alert className="border-red-200 bg-red-50">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                          <AlertDescription className="text-red-900">
+                            <p className="font-semibold">Reserva expirada</p>
+                            <p className="text-sm mt-1">
+                              El tiempo para completar el pago ha vencido. Esta reserva será cancelada automáticamente.
+                            </p>
+                          </AlertDescription>
+                        </div>
+                      </Alert>
+                    )}
+
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-5 w-5 text-primary" />
+                        <span className="font-semibold text-foreground">
+                          {reservation.vuelo.origen.ciudad}
+                        </span>
+                      </div>
+                      <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-5 w-5 text-primary" />
+                        <span className="font-semibold text-foreground">
+                          {reservation.vuelo.destino.ciudad}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="px-6 space-y-3 pb-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <div className="px-6 space-y-3 pb-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Fecha y hora</p>
+                          <p className="text-sm font-medium">
+                            {new Date(reservation.vuelo.fechaSalida).toLocaleDateString('es-MX', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric'
+                            })} • {reservation.vuelo.horaSalida}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Plane className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Número de vuelo</p>
+                          <p className="text-sm font-medium">{reservation.vuelo.numeroVuelo}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Pasajero</p>
+                          <p className="text-sm font-medium">
+                            {reservation.pasajero.nombre} {reservation.pasajero.apellido}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-4 w-4 items-center justify-center text-muted-foreground">
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="2" />
+                            <path d="M9 3v18M15 3v18M3 9h18M3 15h18" strokeWidth="2" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Asiento</p>
+                          <p className="text-sm font-medium">{reservation.asiento.numero}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 rounded-lg bg-accent px-3 py-2">
+                      <CreditCard className="h-4 w-4 text-primary" />
                       <div>
-                        <p className="text-xs text-muted-foreground">Fecha y hora</p>
-                        <p className="text-sm font-medium">
-                          {new Date(reservation.vuelo.fechaSalida).toLocaleDateString('es-MX', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric'
-                          })} • {reservation.vuelo.horaSalida}
+                        <p className="text-xs text-muted-foreground">Precio pagado</p>
+                        <p className="text-base font-bold text-primary">
+                          ${reservation.precioTotal.toLocaleString()} MXN
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Plane className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Número de vuelo</p>
-                        <p className="text-sm font-medium">{reservation.vuelo.numeroVuelo}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Pasajero</p>
-                        <p className="text-sm font-medium">
-                          {reservation.pasajero.nombre} {reservation.pasajero.apellido}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-4 w-4 items-center justify-center text-muted-foreground">
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="2" />
-                          <path d="M9 3v18M15 3v18M3 9h18M3 15h18" strokeWidth="2" />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Asiento</p>
-                        <p className="text-sm font-medium">{reservation.asiento.numero}</p>
-                      </div>
-                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2 rounded-lg bg-accent px-3 py-2">
-                    <CreditCard className="h-4 w-4 text-primary" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Precio pagado</p>
-                      <p className="text-base font-bold text-primary">
-                        ${reservation.precioTotal.toLocaleString()} MXN
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                  <div className="flex gap-2 border-t bg-muted/30 p-4">
+                    {/* 🆕 Botón "Completar Pago" para pendientes */}
+                    {esExpirable && (
+                      <Button
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                        size="sm"
+                        onClick={() => navigate(`/reservas/${reservation._id}/pago`)}
+                      >
+                        <CreditCard className="h-4 w-4 mr-1" />
+                        Completar Pago
+                      </Button>
+                    )}
 
-                <div className="flex gap-2 border-t bg-muted/30 p-4">
-                  <Button 
-                    variant="outline" 
-                    className="flex-1 bg-transparent" 
-                    size="sm"
-                    onClick={() => navigate(`/reservas/${reservation._id}/confirmacion`)}
-                  >
-                    <Eye className="h-4 w-4 mr-1" />
-                    Ver detalles
-                  </Button>
-                  {reservation.estado === 'confirmada' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive bg-transparent"
-                      onClick={() => handleCancelReservation(reservation._id)}
-                    >
-                      <X className="h-4 w-4 mr-1" />
-                      Cancelar
-                    </Button>
-                  )}
-                  {(reservation.estado === 'completada' || reservation.estado === 'confirmada') && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => navigate(`/reservas/${reservation._id}/confirmacion`)}
-                    >
-                      <FileDown className="h-4 w-4 mr-1" />
-                      Comprobante
-                    </Button>
-                  )}
-                </div>
-              </Card>
-            ))}
+                    {/* Botones originales */}
+                    {!esExpirable && !estaExpirada && (
+                      <Button 
+                        variant="outline" 
+                        className="flex-1 bg-transparent" 
+                        size="sm"
+                        onClick={() => navigate(`/reservas/${reservation._id}/confirmacion`)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Ver detalles
+                      </Button>
+                    )}
+
+                    {reservation.estado === 'confirmada' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive bg-transparent"
+                        onClick={() => handleCancelReservation(reservation._id)}
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Cancelar
+                      </Button>
+                    )}
+
+                    {(reservation.estado === 'completada' || reservation.estado === 'confirmada') && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => navigate(`/reservas/${reservation._id}/confirmacion`)}
+                      >
+                        <FileDown className="h-4 w-4 mr-1" />
+                        Comprobante
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         ) : (
           // Empty State

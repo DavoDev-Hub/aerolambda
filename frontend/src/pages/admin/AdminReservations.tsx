@@ -81,7 +81,6 @@ export default function AdminReservations() {
   return (
     <AdminLayout pageTitle="Reservas">
       <div className="p-8 space-y-6">
-        <h1 className="text-3xl font-bold">Gestión de Reservas</h1>
 
         {/* Tabla de reservas */}
         <Card className="overflow-hidden">

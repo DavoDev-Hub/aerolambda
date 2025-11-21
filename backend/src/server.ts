@@ -8,6 +8,7 @@ import authRoutes from './routes/auth.routes';
 import flightRoutes from './routes/flight.routes';
 import seatRoutes from './routes/seat.routes';
 import bookingRoutes from './routes/booking.routes';
+import dashboardRoutes from './routes/dashboard.routes';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -38,6 +39,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/vuelos', flightRoutes);
 app.use('/api/asientos', seatRoutes);
 app.use('/api/reservas', bookingRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Manejador de rutas no encontradas
 app.use((req: Request, res: Response) => {
@@ -57,32 +59,6 @@ const startServer = async () => {
     app.listen(PORT, () => {
       console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
       console.log(`✈️  AeroLambda Backend - TypeScript`);
-      console.log(`\n📡 Rutas disponibles:`);
-      console.log(`\n   🏥 Health:`);
-      console.log(`      - GET    /api/health`);
-      console.log(`\n   👤 Autenticación:`);
-      console.log(`      - POST   /api/auth/registro`);
-      console.log(`      - POST   /api/auth/login`);
-      console.log(`      - GET    /api/auth/perfil`);
-      console.log(`\n   ✈️  Vuelos:`);
-      console.log(`      - GET    /api/vuelos/buscar (público)`);
-      console.log(`      - POST   /api/vuelos (admin)`);
-      console.log(`      - GET    /api/vuelos (admin)`);
-      console.log(`      - GET    /api/vuelos/:id (admin)`);
-      console.log(`      - PUT    /api/vuelos/:id (admin)`);
-      console.log(`      - DELETE /api/vuelos/:id (admin)`);
-      console.log(`      - PATCH  /api/vuelos/:id/estado (admin)`);
-      console.log(`\n   💺 Asientos:`);
-      console.log(`      - GET    /api/asientos/vuelo/:vueloId (público)`);
-      console.log(`      - POST   /api/asientos/:asientoId/bloquear`);
-      console.log(`      - POST   /api/asientos/:asientoId/liberar`);
-      console.log(`\n   🎫 Reservas:`);
-      console.log(`      - POST   /api/reservas`);
-      console.log(`      - POST   /api/reservas/confirmar-pago`);
-      console.log(`      - GET    /api/reservas/mis-reservas`);
-      console.log(`      - GET    /api/reservas/todas (admin)`);
-      console.log(`      - GET    /api/reservas/:id`);
-      console.log(`      - DELETE /api/reservas/:id`);
     });
   } catch (error) {
     console.error('❌ Error al iniciar el servidor:', error);
@@ -92,5 +68,59 @@ const startServer = async () => {
 
 // Iniciar
 startServer();
+
+
+// ===============================================
+// 🧹 JOB DE LIMPIEZA DE RESERVAS PENDIENTES
+// ===============================================
+import Seat from './models/Seat';
+import Booking from './models/Booking';
+import Flight from './models/Flight';
+
+const limpiarReservasPendientes = async () => {
+  try {
+    const hace15Min = new Date(Date.now() - 15 * 60 * 1000);
+    
+    const reservasExpiradas = await Booking.find({
+      estado: 'pendiente',
+      createdAt: { $lt: hace15Min }
+    });
+
+    for (const reserva of reservasExpiradas) {
+      console.log(`❌ Cancelando reserva expirada: ${reserva.codigoReserva}`);
+      
+      // Cambiar estado a cancelada
+      reserva.estado = 'cancelada';
+      await reserva.save();
+      
+      // Liberar asiento
+      const asiento = await Seat.findById(reserva.asiento);
+      if (asiento && asiento.estado === 'bloqueado') {
+        asiento.estado = 'disponible';
+        asiento.reserva = undefined;
+        asiento.bloqueadoHasta = undefined;
+        await asiento.save();
+        
+        // Incrementar asientos disponibles del vuelo
+        await Flight.findByIdAndUpdate(reserva.vuelo, {
+          $inc: { asientosDisponibles: 1 }
+        });
+      }
+    }
+    
+    if (reservasExpiradas.length > 0) {
+      console.log(`✅ ${reservasExpiradas.length} reservas pendientes canceladas`);
+    }
+  } catch (error) {
+    console.error('❌ Error al limpiar reservas pendientes:', error);
+  }
+};
+
+// Ejecutar cada 5 minutos
+setInterval(limpiarReservasPendientes, 5 * 60 * 1000);
+console.log('🔄 Job de limpieza de reservas iniciado (cada 5 minutos)');
+
+// Ejecutar una vez al iniciar
+limpiarReservasPendientes();
 
 export default app;
