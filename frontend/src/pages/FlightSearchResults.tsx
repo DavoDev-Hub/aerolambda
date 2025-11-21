@@ -1,12 +1,29 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ChevronDown, Filter, ArrowRight } from 'lucide-react';
+import { ChevronDown, Filter, ArrowRight, SearchX, Badge } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion'; // Importar animaciones
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import Header from '@/components/flight/Header';
 import SearchHeader from '@/components/flight/SearchHeader';
 import FlightFilters from '@/components/flight/FlightFilters';
-import FlightCard, { Flight } from '@/components/flight/FlightCard';
+import FlightCard, { Flight } from '@/components/flight/FlightCard'; // Asegúrate que importe el nuevo FlightCard
+
+// Variantes para la animación escalonada (stagger)
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 }
+};
 
 export default function FlightSearchResults() {
   const [searchParams] = useSearchParams();
@@ -106,29 +123,23 @@ export default function FlightSearchResults() {
     return true;
   });
 
-  // Ordenar vuelos de ida
-  const sortedFlightsIda = [...filteredFlightsIda];
-  if (sortBy === 'price') {
-    sortedFlightsIda.sort((a, b) => a.precio - b.precio);
-  } else if (sortBy === 'duration') {
-    sortedFlightsIda.sort((a, b) => {
-      const aHours = parseInt(a.duracion);
-      const bHours = parseInt(b.duracion);
-      return aHours - bHours;
-    });
-  }
+  // Funciones de ordenamiento reutilizables
+  const sortFlights = (flights: Flight[]) => {
+    const sorted = [...flights];
+    if (sortBy === 'price') {
+      sorted.sort((a, b) => a.precio - b.precio);
+    } else if (sortBy === 'duration') {
+      sorted.sort((a, b) => {
+        const aHours = parseInt(a.duracion);
+        const bHours = parseInt(b.duracion);
+        return aHours - bHours;
+      });
+    }
+    return sorted;
+  };
 
-  // Ordenar vuelos de vuelta
-  const sortedFlightsVuelta = [...filteredFlightsVuelta];
-  if (sortBy === 'price') {
-    sortedFlightsVuelta.sort((a, b) => a.precio - b.precio);
-  } else if (sortBy === 'duration') {
-    sortedFlightsVuelta.sort((a, b) => {
-      const aHours = parseInt(a.duracion);
-      const bHours = parseInt(b.duracion);
-      return aHours - bHours;
-    });
-  }
+  const sortedFlightsIda = sortFlights(filteredFlightsIda);
+  const sortedFlightsVuelta = sortFlights(filteredFlightsVuelta);
 
   const handleModifySearch = () => {
     navigate('/');
@@ -137,191 +148,212 @@ export default function FlightSearchResults() {
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
     const date = new Date(dateString);
-    return date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
+    return date.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' });
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-slate-50">
       <Header />
       
-      {/* Search Header */}
-      <SearchHeader
-        origin={origen}
-        destination={destino}
-        date={formatDate(fecha)}
-        passengers={pasajeros}
-        onModifySearch={handleModifySearch}
-      />
+      {/* Search Header con animación */}
+      <motion.div 
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <SearchHeader
+          origin={origen}
+          destination={destino}
+          date={formatDate(fecha)}
+          passengers={pasajeros}
+          onModifySearch={handleModifySearch}
+        />
+      </motion.div>
 
       {/* Main Content */}
-      <div className="flex gap-6 p-4 md:p-8 max-w-7xl mx-auto">
-        {/* Sidebar Filters */}
-        {showFilters && (
-          <div className="w-full lg:w-64 flex-shrink-0">
-            <FlightFilters
-              priceRange={priceRange}
-              setPriceRange={setPriceRange}
-              stops={stops}
-              setStops={setStops}
-            />
-          </div>
-        )}
+      <div className="flex flex-col lg:flex-row gap-8 p-4 md:p-8 max-w-7xl mx-auto">
+        
+        {/* Sidebar Filters con animación deslizante */}
+        <AnimatePresence>
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className={`w-full lg:w-72 flex-shrink-0 ${showFilters ? 'block' : 'hidden lg:block'}`}
+            >
+              <FlightFilters
+                priceRange={priceRange}
+                setPriceRange={setPriceRange}
+                stops={stops}
+                setStops={setStops}
+              />
+            </motion.div>
+        </AnimatePresence>
 
         {/* Results Section */}
         <div className="flex-1 w-full">
-          {/* Mobile Filter Toggle */}
-          <div className="lg:hidden mb-4">
-            <Button
-              variant="outline"
-              onClick={() => setShowFilters(!showFilters)}
-              className="w-full"
-            >
-              <Filter className="w-4 h-4 mr-2" />
-              {showFilters ? 'Ocultar filtros' : 'Mostrar filtros'}
-            </Button>
-          </div>
-
-          {/* Desktop Filters Toggle */}
-          <div className="hidden lg:block mb-4">
-            <Button
-              variant="outline"
-              onClick={() => setShowFilters(!showFilters)}
-              className="text-sm"
-            >
-              <Filter className="w-4 h-4 mr-2" />
-              {showFilters ? 'Ocultar' : 'Mostrar'} filtros
-            </Button>
-          </div>
-
-          {/* Sort Dropdown */}
-          <div className="mb-6 flex justify-between items-center">
-            <p className="text-sm text-muted-foreground">
-              {loading ? 'Buscando...' : (
-                esRedondo 
-                  ? `${sortedFlightsIda.length} vuelos de ida • ${sortedFlightsVuelta.length} vuelos de vuelta`
-                  : `${sortedFlightsIda.length} vuelos encontrados`
-              )}
-            </p>
-            <div className="relative">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="appearance-none bg-white border border-border rounded-lg px-4 py-2 pr-8 text-foreground cursor-pointer hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50"
+          
+          {/* Toolbar (Filtros móvil y Ordenamiento) */}
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6"
+          >
+            <div className="lg:hidden w-full sm:w-auto">
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className="w-full sm:w-auto bg-white"
               >
-                <option value="recommended">Recomendado</option>
-                <option value="price">Precio: menor a mayor</option>
-                <option value="duration">Duración: menor a mayor</option>
-              </select>
-              <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                <Filter className="w-4 h-4 mr-2" />
+                {showFilters ? 'Ocultar filtros' : 'Filtrar resultados'}
+              </Button>
             </div>
-          </div>
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto justify-between">
+              <p className="text-sm text-gray-500 font-medium">
+                {loading ? 'Buscando las mejores opciones...' : (
+                  esRedondo 
+                    ? `${sortedFlightsIda.length} ida • ${sortedFlightsVuelta.length} vuelta`
+                    : `${sortedFlightsIda.length} resultados encontrados`
+                )}
+              </p>
+              
+              <div className="relative w-full sm:w-auto">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="w-full sm:w-auto appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2 pr-10 text-sm font-medium text-gray-700 cursor-pointer hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-sm"
+                >
+                  <option value="recommended">Recomendado</option>
+                  <option value="price">Precio: más bajo</option>
+                  <option value="duration">Duración: más corta</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+          </motion.div>
 
           {/* Loading State */}
           {loading && (
-            <Card className="p-8 text-center">
-              <div className="animate-pulse">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto mb-4"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
-              </div>
-            </Card>
+            <div className="space-y-4">
+               {[1, 2, 3].map((n) => (
+                 <div key={n} className="w-full h-48 bg-white rounded-xl shadow-sm animate-pulse"></div>
+               ))}
+            </div>
           )}
 
           {/* Error State */}
           {error && !loading && (
-            <Card className="p-8 text-center">
-              <p className="text-destructive mb-2">❌ {error}</p>
-              <Button onClick={() => navigate('/')} className="mt-4">
-                Volver al inicio
-              </Button>
-            </Card>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <Card className="p-12 text-center bg-white">
+                <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <SearchX className="w-8 h-8 text-red-500" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Algo salió mal</h3>
+                <p className="text-gray-500 mb-6">{error}</p>
+                <Button onClick={() => navigate('/')} variant="outline">
+                    Volver al inicio
+                </Button>
+                </Card>
+            </motion.div>
           )}
 
           {/* Flights List */}
           {!loading && !error && (
-            <div className="space-y-8">
+            <div className="space-y-10">
+              
               {/* Vuelos de IDA */}
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <h2 className="text-2xl font-bold text-foreground">
-                    Vuelos de ida
-                  </h2>
-                  <div className="flex items-center gap-1 text-primary">
-                    <span className="font-semibold">{origen}</span>
-                    <ArrowRight className="w-5 h-5" />
-                    <span className="font-semibold">{destino}</span>
+              <motion.div 
+                 variants={containerVariants}
+                 initial="hidden"
+                 animate="show"
+              >
+                <div className="flex items-center gap-3 mb-5 pb-2 border-b border-gray-200">
+                  <Badge className="bg-primary text-white hover:bg-primary px-3">IDA</Badge>
+                  <div className="flex items-center gap-2 text-gray-700 text-lg font-bold">
+                    <span>{origen}</span>
+                    <ArrowRight className="w-5 h-5 text-gray-400" />
+                    <span>{destino}</span>
                   </div>
-                  <span className="text-sm text-muted-foreground">
-                    {formatDate(fecha)}
+                  <span className="text-sm text-gray-500 ml-auto hidden sm:block capitalize">
+                    {new Date(fecha).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
                   </span>
                 </div>
 
                 {sortedFlightsIda.length > 0 ? (
                   <div className="space-y-4">
                     {sortedFlightsIda.map((flight) => (
-                      <FlightCard 
-                        key={flight._id || flight.id} 
-                        flight={flight} 
-                        numPasajeros={pasajeros}
-                      />
+                      <motion.div key={flight._id || flight.id} variants={itemVariants}>
+                          <FlightCard 
+                            flight={flight} 
+                            numPasajeros={pasajeros}
+                          />
+                      </motion.div>
                     ))}
                   </div>
                 ) : (
-                  <Card className="p-8 text-center">
-                    <p className="text-muted-foreground">
-                      No se encontraron vuelos de ida para esta búsqueda
+                  <Card className="p-12 text-center bg-gray-50 border-dashed border-2">
+                    <p className="text-gray-500 font-medium">
+                      No se encontraron vuelos de ida disponibles con estos filtros.
                     </p>
                   </Card>
                 )}
-              </div>
+              </motion.div>
 
               {/* Vuelos de VUELTA (solo si es viaje redondo) */}
               {esRedondo && fechaVuelta && (
-                <div className="pt-8 border-t-2 border-primary/20">
-                  <div className="flex items-center gap-2 mb-4">
-                    <h2 className="text-2xl font-bold text-foreground">
-                      Vuelos de vuelta
-                    </h2>
-                    <div className="flex items-center gap-1 text-primary">
-                      <span className="font-semibold">{destino}</span>
-                      <ArrowRight className="w-5 h-5" />
-                      <span className="font-semibold">{origen}</span>
+                <motion.div 
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="show"
+                    className="pt-4"
+                >
+                  <div className="flex items-center gap-3 mb-5 pb-2 border-b border-gray-200">
+                    <Badge className="bg-blue-600 text-white hover:bg-blue-700 px-3">VUELTA</Badge>
+                    <div className="flex items-center gap-2 text-gray-700 text-lg font-bold">
+                      <span>{destino}</span>
+                      <ArrowRight className="w-5 h-5 text-gray-400" />
+                      <span>{origen}</span>
                     </div>
-                    <span className="text-sm text-muted-foreground">
-                      {formatDate(fechaVuelta)}
+                    <span className="text-sm text-gray-500 ml-auto hidden sm:block capitalize">
+                      {new Date(fechaVuelta).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
                     </span>
                   </div>
 
                   {sortedFlightsVuelta.length > 0 ? (
                     <div className="space-y-4">
                       {sortedFlightsVuelta.map((flight) => (
-                        <FlightCard 
-                          key={flight._id || flight.id} 
-                          flight={flight} 
-                          numPasajeros={pasajeros}
-                        />
+                        <motion.div key={flight._id || flight.id} variants={itemVariants}>
+                            <FlightCard 
+                              flight={flight} 
+                              numPasajeros={pasajeros}
+                            />
+                        </motion.div>
                       ))}
                     </div>
                   ) : (
-                    <Card className="p-8 text-center">
-                      <p className="text-muted-foreground">
-                        No se encontraron vuelos de vuelta para esta búsqueda
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Intenta seleccionar otra fecha de regreso
+                    <Card className="p-12 text-center bg-gray-50 border-dashed border-2">
+                      <p className="text-gray-500 font-medium">
+                        No se encontraron vuelos de vuelta disponibles.
                       </p>
                     </Card>
                   )}
-                </div>
+                </motion.div>
               )}
             </div>
           )}
 
           {/* Empty State con filtros */}
           {!loading && !error && sortedFlightsIda.length === 0 && flightsIda.length > 0 && (
-            <Card className="p-8 text-center">
-              <p className="text-muted-foreground mb-2">No hay vuelos que coincidan con los filtros</p>
-              <p className="text-sm text-muted-foreground">
-                Intenta ajustar tus filtros para ver más resultados
+            <Card className="p-12 text-center bg-white">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                 <Filter className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Sin resultados con estos filtros</h3>
+              <p className="text-gray-500 mb-6">
+                Intenta ajustar el rango de precios o las escalas para ver más opciones.
               </p>
               <Button
                 variant="outline"
@@ -329,24 +361,8 @@ export default function FlightSearchResults() {
                   setPriceRange([0, 5000]);
                   setStops([]);
                 }}
-                className="mt-4"
               >
                 Limpiar filtros
-              </Button>
-            </Card>
-          )}
-
-          {/* No Results State */}
-          {!loading && !error && flightsIda.length === 0 && (
-            <Card className="p-8 text-center">
-              <p className="text-muted-foreground mb-2">
-                No se encontraron vuelos para esta búsqueda
-              </p>
-              <p className="text-sm text-muted-foreground mb-4">
-                Intenta modificar tu búsqueda o seleccionar otras fechas
-              </p>
-              <Button onClick={handleModifySearch}>
-                Modificar búsqueda
               </Button>
             </Card>
           )}

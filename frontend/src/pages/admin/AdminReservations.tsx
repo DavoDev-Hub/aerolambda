@@ -8,10 +8,23 @@ import { Eye } from 'lucide-react';
 interface Reservation {
   _id: string;
   codigoReserva: string;
-  usuario: { nombre: string; apellido: string; email: string };
-  vuelo: { numeroVuelo: string; origen: { codigo: string }; destino: { codigo: string } };
-  asiento: { numero: string };
-  pasajero: { nombre: string; apellido: string };
+  usuario: { 
+    nombre: string; 
+    apellido: string; 
+    email: string;
+  } | null;
+  vuelo: { 
+    numeroVuelo: string; 
+    origen: { codigo: string }; 
+    destino: { codigo: string };
+  } | null;
+  asiento: { 
+    numero: string;
+  } | null;
+  pasajero: { 
+    nombre: string; 
+    apellido: string;
+  };
   precioTotal: number;
   estado: string;
   createdAt: string;
@@ -72,7 +85,12 @@ export default function AdminReservations() {
     return (
       <AdminLayout pageTitle="Reservas">
         <div className="p-8">
-          <p>Cargando reservas...</p>
+          <div className="flex items-center justify-center h-96">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-gray-600">Cargando reservas...</p>
+            </div>
+          </div>
         </div>
       </AdminLayout>
     );
@@ -81,6 +99,31 @@ export default function AdminReservations() {
   return (
     <AdminLayout pageTitle="Reservas">
       <div className="p-8 space-y-6">
+        {/* Stats rápidas */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="p-4">
+            <p className="text-sm text-gray-600 mb-1">Total Reservas</p>
+            <p className="text-2xl font-bold text-gray-900">{reservations.length}</p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-sm text-gray-600 mb-1">Confirmadas</p>
+            <p className="text-2xl font-bold text-green-600">
+              {reservations.filter(r => r.estado === 'confirmada').length}
+            </p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-sm text-gray-600 mb-1">Pendientes</p>
+            <p className="text-2xl font-bold text-yellow-600">
+              {reservations.filter(r => r.estado === 'pendiente').length}
+            </p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-sm text-gray-600 mb-1">Canceladas</p>
+            <p className="text-2xl font-bold text-red-600">
+              {reservations.filter(r => r.estado === 'cancelada').length}
+            </p>
+          </Card>
+        </div>
 
         {/* Tabla de reservas */}
         <Card className="overflow-hidden">
@@ -106,24 +149,32 @@ export default function AdminReservations() {
                       {reservation.codigoReserva}
                     </td>
                     <td className="px-6 py-4">
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {reservation.usuario.nombre} {reservation.usuario.apellido}
-                        </p>
-                        <p className="text-xs text-gray-500">{reservation.usuario.email}</p>
-                      </div>
+                      {reservation.usuario ? (
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {reservation.usuario.nombre} {reservation.usuario.apellido}
+                          </p>
+                          <p className="text-xs text-gray-500">{reservation.usuario.email}</p>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-400">Usuario eliminado</p>
+                      )}
                     </td>
                     <td className="px-6 py-4 font-semibold text-gray-900">
-                      {reservation.vuelo.numeroVuelo}
+                      {reservation.vuelo?.numeroVuelo || 'N/A'}
                     </td>
                     <td className="px-6 py-4">
-                      {reservation.vuelo.origen.codigo} → {reservation.vuelo.destino.codigo}
+                      {reservation.vuelo ? (
+                        <span>{reservation.vuelo.origen.codigo} → {reservation.vuelo.destino.codigo}</span>
+                      ) : (
+                        <span className="text-gray-400">Vuelo eliminado</span>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       {reservation.pasajero.nombre} {reservation.pasajero.apellido}
                     </td>
                     <td className="px-6 py-4 font-semibold text-gray-900">
-                      {reservation.asiento.numero}
+                      {reservation.asiento?.numero || 'N/A'}
                     </td>
                     <td className="px-6 py-4 font-semibold text-gray-900">
                       ${reservation.precioTotal.toLocaleString()}
@@ -134,7 +185,14 @@ export default function AdminReservations() {
                       </Badge>
                     </td>
                     <td className="px-6 py-4 flex gap-2">
-                      <Button size="sm" variant="outline">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => {
+                          // TODO: Implementar modal de detalles
+                          alert(`Ver detalles de reserva: ${reservation.codigoReserva}`);
+                        }}
+                      >
                         <Eye className="w-4 h-4" />
                       </Button>
                     </td>

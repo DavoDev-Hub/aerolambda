@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Calendar, MapPin, Users, Search, Plane } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { MapPin, Users, Search, ArrowRightLeft } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 type FlightSearchFormData = {
   origin: string;
@@ -24,230 +25,170 @@ const mexicanCities = [
 
 export default function FlightSearchForm() {
   const navigate = useNavigate();
-
+  
   const [formData, setFormData] = useState<FlightSearchFormData>({
     origin: '',
     destination: '',
     departureDate: '',
     returnDate: '',
-    isRoundTrip: false,
+    isRoundTrip: true,
     passengers: 1,
   });
 
-  // Tipado sin any: el tipo de "value" depende de la clave "field"
   const handleChange = <K extends keyof FlightSearchFormData>(
     field: K,
     value: FlightSearchFormData[K]
   ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-const handleSubmit = (e: React.FormEvent) => {
-  e.preventDefault();
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Tus validaciones originales
+    if (!formData.origin || !formData.destination || !formData.departureDate) {
+      alert('Por favor completa los campos requeridos');
+      return;
+    }
+    if (formData.isRoundTrip && !formData.returnDate) {
+      alert('Por favor selecciona la fecha de vuelta');
+      return;
+    }
 
-  // Validaciones básicas
-  if (!formData.origin || !formData.destination || !formData.departureDate) {
-    alert('Por favor completa todos los campos requeridos');
-    return;
-  }
+    const searchParams = new URLSearchParams({
+      origen: formData.origin,
+      destino: formData.destination,
+      fecha: formData.departureDate,
+      pasajeros: formData.passengers.toString(),
+      viaje: formData.isRoundTrip ? 'redondo' : 'sencillo',
+    });
 
-  // Si es viaje redondo, validar fecha de vuelta
-  if (formData.isRoundTrip && !formData.returnDate) {
-    alert('Por favor selecciona la fecha de vuelta');
-    return;
-  }
+    if (formData.isRoundTrip && formData.returnDate) {
+      searchParams.append('fechaVuelta', formData.returnDate);
+    }
 
-  // Navegar a resultados de búsqueda con los parámetros
-  const searchParams = new URLSearchParams({
-    origen: formData.origin,
-    destino: formData.destination,
-    fecha: formData.departureDate,
-    pasajeros: formData.passengers.toString(),
-    viaje: formData.isRoundTrip ? 'redondo' : 'sencillo', // ← AGREGAR ESTO
-  });
-
-  // Si es viaje redondo, agregar fecha de vuelta
-  if (formData.isRoundTrip && formData.returnDate) {
-    searchParams.append('fechaVuelta', formData.returnDate);
-  }
-
-  navigate(`/vuelos/buscar?${searchParams.toString()}`);
-};
-
+    navigate(`/vuelos/buscar?${searchParams.toString()}`);
+  };
 
   return (
-    <section className="w-full bg-background py-12 md:py-16">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 border border-border">
-          <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-8">Buscar vuelos</h3>
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: 0.2 }}
+      className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-6 shadow-2xl"
+    >
+      <form onSubmit={handleSubmit}>
+        {/* Tabs Tipo de Viaje */}
+        <div className="flex gap-4 mb-6">
+          <button
+            type="button"
+            onClick={() => handleChange('isRoundTrip', true)}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+              formData.isRoundTrip 
+                ? 'bg-blue-600 text-white shadow-lg' 
+                : 'bg-white/20 text-white hover:bg-white/30'
+            }`}
+          >
+            Viaje Redondo
+          </button>
+          <button
+            type="button"
+            onClick={() => handleChange('isRoundTrip', false)}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+              !formData.isRoundTrip 
+                ? 'bg-blue-600 text-white shadow-lg' 
+                : 'bg-white/20 text-white hover:bg-white/30'
+            }`}
+          >
+            Viaje Sencillo
+          </button>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* First row - Origin and Destination */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Origin City */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-foreground">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MapPin className="w-4 h-4 text-primary" />
-                    <span>¿Desde dónde viajas?</span>
-                  </div>
-                </label>
-                <select
-                  value={formData.origin}
-                  onChange={(e) => handleChange('origin', e.target.value)}
-                  className="w-full px-4 py-3 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                >
-                  <option value="">Selecciona ciudad de origen</option>
-                  {mexicanCities.map((city) => (
-                    <option key={city.code} value={city.code}>
-                      {city.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+        {/* Grid de Inputs */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+          
+          {/* Origen */}
+          <div className="md:col-span-3 relative group">
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500 z-10 w-5 h-5" />
+            <select
+              value={formData.origin}
+              onChange={(e) => handleChange('origin', e.target.value)}
+              className="w-full h-12 pl-10 pr-4 bg-white text-gray-800 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+            >
+              <option value="">Origen</option>
+              {mexicanCities.map((city) => (
+                <option key={city.code} value={city.code}>{city.name}</option>
+              ))}
+            </select>
+          </div>
 
-              {/* Destination City */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-foreground">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MapPin className="w-4 h-4 text-primary" />
-                    <span>¿A dónde vas?</span>
-                  </div>
-                </label>
-                <select
-                  value={formData.destination}
-                  onChange={(e) => handleChange('destination', e.target.value)}
-                  className="w-full px-4 py-3 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                >
-                  <option value="">Selecciona ciudad destino</option>
-                  {mexicanCities.map((city) => (
-                    <option key={city.code} value={city.code}>
-                      {city.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+          {/* Icono decorativo */}
+          <div className="hidden md:flex md:col-span-1 items-center justify-center">
+             <ArrowRightLeft className="text-white/80 w-5 h-5" />
+          </div>
 
-            {/* Second row - Dates and Passengers */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Departure Date */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-foreground">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Calendar className="w-4 h-4 text-primary" />
-                    <span>Fecha de ida</span>
-                  </div>
-                </label>
-                <input
-                  type="date"
-                  value={formData.departureDate}
-                  onChange={(e) => handleChange('departureDate', e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-3 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
-              </div>
+          {/* Destino */}
+          <div className="md:col-span-3 relative group">
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-red-500 z-10 w-5 h-5" />
+            <select
+              value={formData.destination}
+              onChange={(e) => handleChange('destination', e.target.value)}
+              className="w-full h-12 pl-10 pr-4 bg-white text-gray-800 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+            >
+              <option value="">Destino</option>
+              {mexicanCities.map((city) => (
+                <option key={city.code} value={city.code}>{city.name}</option>
+              ))}
+            </select>
+          </div>
 
-              {/* Return Date */}
-              {formData.isRoundTrip && (
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-foreground">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Calendar className="w-4 h-4 text-primary" />
-                      <span>Fecha de vuelta</span>
-                    </div>
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.returnDate}
-                    onChange={(e) => handleChange('returnDate', e.target.value)}
-                    min={
-                      formData.departureDate || new Date().toISOString().split('T')[0]
-                    }
-                    className="w-full px-4 py-3 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                </div>
-              )}
+          {/* Fechas */}
+          <div className={`${formData.isRoundTrip ? 'md:col-span-2' : 'md:col-span-3'} relative`}>
+            <input
+              type="date"
+              value={formData.departureDate}
+              onChange={(e) => handleChange('departureDate', e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
+              className="w-full h-12 px-4 bg-white text-gray-800 rounded-xl border-0 focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
 
-              {/* Passengers */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-foreground">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Users className="w-4 h-4 text-primary" />
-                    <span>Pasajeros</span>
-                  </div>
-                </label>
-                <select
-                  value={formData.passengers}
-                  onChange={(e) =>
-                    handleChange('passengers', parseInt(e.target.value, 10))
-                  }
-                  className="w-full px-4 py-3 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                >
-                  {[1, 2, 3, 4, 5, 6].map((num) => (
-                    <option key={num} value={num}>
-                      {num} {num === 1 ? 'pasajero' : 'pasajeros'}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Round Trip Checkbox */}
-            <div className="flex items-center gap-3 py-2">
+          {formData.isRoundTrip && (
+            <div className="md:col-span-2 relative">
               <input
-                type="checkbox"
-                id="roundTrip"
-                checked={formData.isRoundTrip}
-                onChange={(e) => handleChange('isRoundTrip', e.target.checked)}
-                className="w-5 h-5 rounded border-input bg-background cursor-pointer accent-primary"
+                type="date"
+                value={formData.returnDate}
+                onChange={(e) => handleChange('returnDate', e.target.value)}
+                min={formData.departureDate || new Date().toISOString().split('T')[0]}
+                className="w-full h-12 px-4 bg-white text-gray-800 rounded-xl border-0 focus:ring-2 focus:ring-blue-500"
               />
-              <label htmlFor="roundTrip" className="text-sm font-medium text-foreground cursor-pointer">
-                Viaje redondo
-              </label>
             </div>
+          )}
 
-            {/* Search Button */}
-            <div className="pt-4">
-              <button
-                type="submit"
-                className="w-full bg-primary hover:opacity-90 text-primary-foreground font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] active:scale-95 shadow-lg"
-              >
-                <Search className="w-5 h-5" />
-                Buscar vuelos
-              </button>
-            </div>
-          </form>
+           {/* Botón Buscar */}
+           <div className={`${formData.isRoundTrip ? 'md:col-span-1' : 'md:col-span-2'}`}>
+            <button
+              type="submit"
+              className="w-full h-12 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* Features Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-secondary/20 mb-4">
-              <Plane className="w-6 h-6 text-primary" />
+        {/* Pasajeros */}
+        <div className="mt-4 flex justify-end">
+            <div className="flex items-center gap-2 bg-black/20 px-3 py-1 rounded-lg text-white">
+                <Users className="w-4 h-4" />
+                <select 
+                    value={formData.passengers}
+                    onChange={(e) => handleChange('passengers', parseInt(e.target.value))}
+                    className="bg-transparent border-none text-sm text-white focus:ring-0 cursor-pointer"
+                >
+                    {[1,2,3,4,5,6].map(n => <option key={n} value={n} className="text-black">{n} Pasajero{n > 1 ? 's' : ''}</option>)}
+                </select>
             </div>
-            <h4 className="font-semibold text-foreground mb-2">Vuelos directos</h4>
-            <p className="text-muted-foreground text-sm">Conecta con tus destinos favoritos sin escalas</p>
-          </div>
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-secondary/20 mb-4">
-              <Users className="w-6 h-6 text-primary" />
-            </div>
-            <h4 className="font-semibold text-foreground mb-2">Mejor precio garantizado</h4>
-            <p className="text-muted-foreground text-sm">Compara y ahorra en tus reservas de vuelo</p>
-          </div>
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-secondary/20 mb-4">
-              <MapPin className="w-6 h-6 text-primary" />
-            </div>
-            <h4 className="font-semibold text-foreground mb-2">200+ destinos</h4>
-            <p className="text-muted-foreground text-sm">Vuela a cualquier parte del país con facilidad</p>
-          </div>
         </div>
-      </div>
-    </section>
+      </form>
+    </motion.div>
   );
 }

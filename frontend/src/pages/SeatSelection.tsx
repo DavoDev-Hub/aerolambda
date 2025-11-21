@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import Header from '@/components/flight/Header';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
-import {ArrowRight, Users, X } from 'lucide-react';
+import { ArrowRight, Check, ChevronLeft, Armchair, CreditCard } from 'lucide-react';
 
+// --- Interfaces (Misma lógica) ---
 interface Flight {
   _id: string;
   numeroVuelo: string;
@@ -41,26 +43,28 @@ export default function SeatSelection() {
   const navigate = useNavigate();
   const location = useLocation();
   
+  // Estados de datos
   const [flight, setFlight] = useState<Flight | null>(null);
   const [seats, setSeats] = useState<Seat[]>([]);
   const [selectedSeats, setSelectedSeats] = useState<Seat[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-
-  // Obtener número de pasajeros desde la navegación (viene de la búsqueda)
-  const numPasajeros = (location.state?.numPasajeros as number) || 1;
-
-  // Datos de los pasajeros (array)
+  
+  // Estados de pasajeros
   const [passengersData, setPassengersData] = useState<PassengerData[]>([]);
 
-  // Cargar datos del usuario logueado para el primer pasajero
+  // Estados de UI
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [step, setStep] = useState<1 | 2>(1); // 1: Selección de Asientos, 2: Datos de Pasajeros
+
+  const numPasajeros = (location.state?.numPasajeros as number) || 1;
+
+  // --- LÓGICA (Intacta) ---
   useEffect(() => {
     const userStr = localStorage.getItem('user');
     const initialPassengers: PassengerData[] = [];
 
     for (let i = 0; i < numPasajeros; i++) {
       if (i === 0 && userStr) {
-        // Primer pasajero: datos del usuario logueado
         const user = JSON.parse(userStr);
         initialPassengers.push({
           nombre: user.nombre || '',
@@ -71,7 +75,6 @@ export default function SeatSelection() {
           numeroDocumento: '',
         });
       } else {
-        // Resto: vacío
         initialPassengers.push({
           nombre: '',
           apellido: '',
@@ -82,7 +85,6 @@ export default function SeatSelection() {
         });
       }
     }
-
     setPassengersData(initialPassengers);
   }, [numPasajeros]);
 
@@ -94,20 +96,17 @@ export default function SeatSelection() {
 
         if (seatsData.success) {
           setSeats(seatsData.data.asientos);
-          
           const vueloBasico = seatsData.data.vuelo;
           
+          // Intentar obtener más detalles del vuelo si es necesario
+          // (Aquí simplificamos manteniendo la lógica original)
           const flightResponse = await fetch(`/api/vuelos/buscar?origen=${vueloBasico.origen?.codigo || ''}&destino=${vueloBasico.destino?.codigo || ''}`);
           const flightData = await flightResponse.json();
           
           if (flightData.success && flightData.data.vuelos.length > 0) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const fullFlight = flightData.data.vuelos.find((v: any) => v._id === vueloId);
-            if (fullFlight) {
-              setFlight(fullFlight);
-            } else {
-              setFlight(flightData.data.vuelos[0]);
-            }
+            setFlight(fullFlight || flightData.data.vuelos[0]);
           } else {
             setFlight({
               _id: vueloBasico.id,
@@ -122,43 +121,32 @@ export default function SeatSelection() {
           }
         }
       } catch (error) {
-        console.error('Error loading flight data:', error);
+        console.error('Error loading data:', error);
       } finally {
         setLoading(false);
       }
     };
-
     fetchData();
   }, [vueloId]);
 
   const handleSeatClick = (seat: Seat) => {
     if (seat.estado !== 'disponible') return;
 
-    // Si el asiento ya está seleccionado, quitarlo
     if (selectedSeats.find(s => s._id === seat._id)) {
       setSelectedSeats(selectedSeats.filter(s => s._id !== seat._id));
       return;
     }
 
-    // Si ya tiene el máximo de asientos, no agregar más
     if (selectedSeats.length >= numPasajeros) {
-      alert(`Solo puedes seleccionar ${numPasajeros} asiento${numPasajeros > 1 ? 's' : ''}`);
+      // Pequeña animación de "error" o alerta podría ir aquí
       return;
     }
-
-    // Agregar asiento
     setSelectedSeats([...selectedSeats, seat]);
   };
 
   const removeSeat = (seatId: string) => {
     setSelectedSeats(selectedSeats.filter(s => s._id !== seatId));
-  };
-
-  const getSeatColor = (seat: Seat) => {
-    if (selectedSeats.find(s => s._id === seat._id)) return 'bg-blue-600 text-white';
-    if (seat.estado === 'ocupado') return 'bg-gray-400 cursor-not-allowed';
-    if (seat.estado === 'bloqueado') return 'bg-gray-300 cursor-not-allowed';
-    return 'bg-gray-100 hover:bg-blue-100 cursor-pointer';
+    if (step === 2) setStep(1); // Si borra asiento en paso 2, volver al 1
   };
 
   const updatePassengerData = (index: number, field: keyof PassengerData, value: string) => {
@@ -166,385 +154,421 @@ export default function SeatSelection() {
     newData[index] = { ...newData[index], [field]: value };
     setPassengersData(newData);
   };
-const handleContinue = async () => {
-  if (selectedSeats.length !== numPasajeros) {
-    alert(`Debes seleccionar ${numPasajeros} asiento${numPasajeros > 1 ? 's' : ''}`);
-    return;
-  }
 
-  // Validar datos de todos los pasajeros
-  for (let i = 0; i < passengersData.length; i++) {
-    const passenger = passengersData[i];
-    if (!passenger.nombre || !passenger.apellido || !passenger.email) {
-      alert(`Por favor completa todos los campos del pasajero ${i + 1}`);
-      return;
-    }
-    if (!passenger.numeroDocumento) {
-      alert(`Por favor ingresa el documento del pasajero ${i + 1}`);
-      return;
-    }
-  }
+  const handleContinue = async () => {
+    // Validaciones finales
+    if (selectedSeats.length !== numPasajeros) return;
 
-  setSubmitting(true);
-
-  try {
-    const token = localStorage.getItem('token');
-    
-    if (!token) {
-      alert('Debes iniciar sesión para continuar');
-      navigate('/login');
-      return;
+    for (let i = 0; i < passengersData.length; i++) {
+      const passenger = passengersData[i];
+      if (!passenger.nombre || !passenger.apellido || !passenger.email || !passenger.numeroDocumento) {
+        alert(`Por favor completa todos los campos del pasajero ${i + 1}`);
+        return;
+      }
     }
 
-    // Preparar el payload según el número de pasajeros
-    const payload = numPasajeros === 1 
-      ? {
-          // Reserva simple
-          vueloId: flight?._id,
-          asientoId: selectedSeats[0]._id,
-          pasajero: passengersData[0],
-        }
-      : {
-          // Reserva múltiple
-          vueloId: flight?._id,
-          asientos: selectedSeats.map(seat => seat._id),
-          pasajeros: passengersData,
-        };
+    setSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
 
-    const response = await fetch('/api/reservas', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
+      const payload = numPasajeros === 1 
+        ? { vueloId: flight?._id, asientoId: selectedSeats[0]._id, pasajero: passengersData[0] }
+        : { vueloId: flight?._id, asientos: selectedSeats.map(seat => seat._id), pasajeros: passengersData };
 
-    const data = await response.json();
-
-    if (data.success) {
-      // Navegar al pago con el ID de la primera reserva
-      const reservaId = data.data._id || data.data.reservas?.[0]._id;
-      navigate(`/reservas/${reservaId}/pago`, {
-        state: { 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          reservaIds: data.data.reservas?.map((r: any) => r._id) || [reservaId],
-          precioTotal: data.data.precioTotal || flight?.precio
-        }
+      const response = await fetch('/api/reservas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(payload),
       });
-    } else {
-      alert(data.message || 'Error al crear la reserva');
+
+      const data = await response.json();
+
+      if (data.success) {
+         
+        const reservaId = data.data._id || data.data.reservas?.[0]._id;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const reservaIds = data.data.reservas?.map((r: any) => r._id) || [reservaId];
+        
+        navigate(`/reservas/${reservaId}/pago`, {
+          state: { reservaIds, precioTotal: data.data.precioTotal || flight?.precio }
+        });
+      } else {
+        alert(data.message);
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Error al crear reserva');
+    } finally {
+      setSubmitting(false);
     }
-  } catch (error) {
-    console.error('Error creating reservation:', error);
-    alert('Error al crear la reserva');
-  } finally {
-    setSubmitting(false);
-  }
-};
+  };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <div className="flex items-center justify-center h-96">
-          <p className="text-gray-500">Cargando información del vuelo...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!flight) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <div className="flex items-center justify-center h-96">
-          <p className="text-red-500">Vuelo no encontrado</p>
-        </div>
-      </div>
-    );
-  }
+  // --- HELPERS VISUALES ---
+  const getSeatStyle = (seat: Seat) => {
+    const isSelected = selectedSeats.find(s => s._id === seat._id);
+    
+    if (isSelected) return 'bg-primary text-white border-primary shadow-md scale-105 ring-2 ring-blue-200';
+    if (seat.estado === 'ocupado') return 'bg-slate-200 text-slate-400 cursor-not-allowed';
+    if (seat.estado === 'bloqueado') return 'bg-slate-200 text-slate-400 cursor-not-allowed';
+    
+    return 'bg-white border border-gray-200 text-gray-600 hover:border-primary hover:text-primary cursor-pointer hover:shadow-sm';
+  };
 
   const rows = Array.from(new Set(seats.map(s => s.fila))).sort((a, b) => a - b);
   const columns = ['A', 'B', 'C', 'D', 'E', 'F'];
-  const precioTotal = (flight.precio || 0) * selectedSeats.length;
+  const precioTotal = (flight?.precio || 0) * numPasajeros;
+
+  // --- RENDER ---
+  if (loading || !flight) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50 pb-20">
       <Header />
 
-      {/* Información del vuelo */}
-      {flight && (
-        <div className="bg-white border-b border-gray-200 py-4">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between">
+      {/* Header de Progreso */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
+        <div className="max-w-5xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            {/* Ruta y Pasos */}
+            <div className="flex items-center gap-6">
+              {step === 2 && (
+                <button 
+                  onClick={() => setStep(1)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5 text-gray-600" />
+                </button>
+              )}
+              
               <div>
-                <p className="text-sm text-gray-500">Ruta</p>
-                <p className="text-xl font-bold text-gray-900">
-                  {flight.origen?.codigo || 'N/A'} → {flight.destino?.codigo || 'N/A'}
-                </p>
-                <p className="text-sm text-gray-600">
-                  {flight.origen?.ciudad || ''} a {flight.destino?.ciudad || ''}
-                </p>
+                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                  <span className={step === 1 ? 'font-bold text-primary' : ''}>1. Asientos</span>
+                  <span className="text-gray-300">/</span>
+                  <span className={step === 2 ? 'font-bold text-primary' : ''}>2. Pasajeros</span>
+                  <span className="text-gray-300">/</span>
+                  <span>3. Pago</span>
+                </div>
+                <h1 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  {flight.origen.codigo} <ArrowRight className="w-4 h-4 text-gray-400" /> {flight.destino.codigo}
+                </h1>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Fecha y Hora</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  {flight.fechaSalida ? new Date(flight.fechaSalida).toLocaleDateString('es-MX', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
-                  }) : 'N/A'}
-                </p>
-                <p className="text-sm text-gray-600">{flight.horaSalida || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Pasajeros</p>
-                <p className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <Users className="w-5 h-5" />
-                  {numPasajeros}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Vuelo</p>
-                <p className="text-lg font-semibold text-primary">{flight.numeroVuelo || 'N/A'}</p>
-                <p className="text-lg font-bold text-gray-900">
-                  ${flight.precio ? flight.precio.toLocaleString() : '0'} x {numPasajeros}
-                </p>
-              </div>
+            </div>
+
+            {/* Resumen de Precio Rápido */}
+            <div className="text-right hidden sm:block">
+              <p className="text-xs text-gray-500">Total estimado</p>
+              <p className="text-xl font-bold text-primary">${precioTotal.toLocaleString()}</p>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Contenido principal */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className={`grid gap-8 transition-all duration-500 ${
-          selectedSeats.length > 0 ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1'
-        }`}>
-          {/* Mapa de asientos */}
-          <div className={`transition-all duration-500 ${
-            selectedSeats.length > 0 ? 'lg:col-span-2' : 'max-w-4xl mx-auto w-full'
-          }`}>
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
+      <div className="max-w-5xl mx-auto px-4 mt-8">
+        <AnimatePresence mode='wait'>
+          
+          {/* --- PASO 1: SELECCIÓN DE ASIENTOS --- */}
+          {step === 1 && (
+            <motion.div
+              key="step1"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="flex flex-col lg:flex-row gap-8 items-start"
+            >
+              {/* Contenedor del Mapa (Forma de Avión) */}
+              <div className="flex-1 w-full">
+                <div className="text-center mb-6">
                   <h2 className="text-2xl font-bold text-gray-900">Selecciona tus asientos</h2>
-                  <p className="text-gray-600">
-                    {selectedSeats.length} de {numPasajeros} asiento{numPasajeros > 1 ? 's' : ''} seleccionado{numPasajeros > 1 ? 's' : ''}
+                  <p className="text-gray-500">
+                    Selecciona {numPasajeros} {numPasajeros > 1 ? 'asientos' : 'asiento'} en el mapa
                   </p>
                 </div>
-                
-                {/* Asientos seleccionados */}
-                {selectedSeats.length > 0 && (
-                  <div className="flex gap-2">
-                    {selectedSeats.map((seat) => (
-                      <div
-                        key={seat._id}
-                        className="flex items-center gap-1 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium"
-                      >
-                        {seat.numero}
-                        <button
-                          onClick={() => removeSeat(seat._id)}
-                          className="hover:text-blue-600"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
+
+                {/* Fuselaje */}
+                <div className="bg-white rounded-[3rem] rounded-b-[2rem] shadow-xl border border-gray-200 p-8 pb-16 max-w-md mx-auto relative overflow-hidden">
+                  {/* Cabina decorativa */}
+                  <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-gray-50 to-white border-b border-gray-100 rounded-t-[3rem] flex justify-center pt-6">
+                      <div className="w-16 h-1 bg-gray-200 rounded-full"></div>
                   </div>
-                )}
+
+                  <div className="mt-20">
+                    {/* Guía de Columnas */}
+                    <div className="grid grid-cols-7 gap-2 mb-4 px-4 text-xs font-bold text-gray-400 text-center">
+                      <div></div>
+                      {columns.map(col => <div key={col}>{col}</div>)}
+                    </div>
+
+                    {/* Grid de Asientos */}
+                    <div className="space-y-2 px-4">
+                      {rows.map(row => (
+                        <div key={row} className="grid grid-cols-7 gap-2 items-center">
+                          <span className="text-xs font-bold text-gray-400 text-center">{row}</span>
+                          {columns.map(col => {
+                            const seat = seats.find(s => s.fila === row && s.columna === col);
+                            if (!seat) return <div key={`${row}-${col}`} />;
+                            
+                            // Pasillo
+                            if (col === 'D') {
+                              return (
+                                <div key={`${row}-${col}`} className="flex gap-2">
+                                    <div className="w-3 shrink-0 flex justify-center items-center text-[10px] text-gray-200">|</div>
+                                    <motion.button
+                                      whileTap={{ scale: 0.9 }}
+                                      onClick={() => handleSeatClick(seat)}
+                                      disabled={seat.estado !== 'disponible'}
+                                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center text-xs font-bold transition-all duration-200 ${getSeatStyle(seat)}`}
+                                    >
+                                      {seat.numero}
+                                    </motion.button>
+                                </div>
+                              )
+                            }
+
+                            return (
+                              <motion.button
+                                key={seat._id}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => handleSeatClick(seat)}
+                                disabled={seat.estado !== 'disponible'}
+                                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center text-xs font-bold transition-all duration-200 ${getSeatStyle(seat)}`}
+                              >
+                                {isSelectedSeat(seat) ? <Check className="w-4 h-4" /> : seat.numero}
+                              </motion.button>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Alas decorativas (CSS simple) */}
+                  <div className="absolute top-1/3 -left-10 w-8 h-32 bg-gray-100 rounded-r-full transform -skew-y-12 opacity-50 z-0"></div>
+                  <div className="absolute top-1/3 -right-10 w-8 h-32 bg-gray-100 rounded-l-full transform skew-y-12 opacity-50 z-0"></div>
+                </div>
+
+                {/* Leyenda */}
+                <div className="flex justify-center gap-6 mt-8 text-sm">
+                    <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-white border border-gray-300 rounded"></div>
+                        <span className="text-gray-600">Libre</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-primary rounded"></div>
+                        <span className="text-gray-600">Seleccionado</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-slate-200 rounded"></div>
+                        <span className="text-gray-600">Ocupado</span>
+                    </div>
+                </div>
               </div>
 
-              {/* Leyenda */}
-              <div className="flex items-center gap-6 mb-6 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-gray-100 rounded border border-gray-300"></div>
-                  <span className="text-gray-700">Disponible</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-blue-600 rounded"></div>
-                  <span className="text-gray-700">Seleccionado</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-gray-400 rounded"></div>
-                  <span className="text-gray-700">Ocupado</span>
-                </div>
-              </div>
-
-              {/* Grid de asientos */}
-              <div className="space-y-2">
-                <div className="grid grid-cols-7 gap-2 mb-4">
-                  <div></div>
-                  {columns.map(col => (
-                    <div key={col} className="text-center font-semibold text-gray-700">
-                      {col}
-                    </div>
-                  ))}
-                </div>
-
-                {rows.map(row => (
-                  <div key={row} className="grid grid-cols-7 gap-2">
-                    <div className="flex items-center justify-center font-semibold text-gray-700">
-                      {row}
-                    </div>
-                    {columns.map(col => {
-                      const seat = seats.find(s => s.fila === row && s.columna === col);
-                      if (!seat) {
-                        return <div key={`${row}-${col}`} className="w-full h-10"></div>;
-                      }
-
-                      if (col === 'D') {
-                        return (
-                          <div key={`${row}-${col}`} className="flex gap-2">
-                            <div className="w-2"></div>
-                            <button
-                              onClick={() => handleSeatClick(seat)}
-                              disabled={seat.estado !== 'disponible'}
-                              className={`w-full h-10 rounded font-medium text-sm transition-colors ${getSeatColor(seat)}`}
-                            >
-                              {seat.numero}
-                            </button>
+              {/* Sidebar de Resumen (Sticky) */}
+              <div className="w-full lg:w-80 lg:sticky lg:top-24">
+                <Card className="p-6 shadow-lg border-t-4 border-t-primary">
+                  <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <Armchair className="w-5 h-5 text-primary" />
+                    Tu selección
+                  </h3>
+                  
+                  {selectedSeats.length > 0 ? (
+                    <div className="space-y-3 mb-6">
+                      {selectedSeats.map((seat, idx) => (
+                        <div key={seat._id} className="flex justify-between items-center bg-blue-50 p-3 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <span className="bg-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-primary border border-blue-100">
+                              {idx + 1}
+                            </span>
+                            <span className="font-semibold text-gray-800">Asiento {seat.numero}</span>
                           </div>
-                        );
-                      }
+                          <button onClick={() => removeSeat(seat._id)} className="text-gray-400 hover:text-red-500">
+                             <span className="sr-only">Eliminar</span>
+                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200 mb-6">
+                        <p className="text-sm text-gray-500">No has seleccionado asientos</p>
+                    </div>
+                  )}
 
-                      return (
-                        <button
-                          key={seat._id}
-                          onClick={() => handleSeatClick(seat)}
-                          disabled={seat.estado !== 'disponible'}
-                          className={`w-full h-10 rounded font-medium text-sm transition-colors ${getSeatColor(seat)}`}
-                        >
-                          {seat.numero}
-                        </button>
-                      );
-                    })}
+                  <div className="space-y-2 pt-4 border-t border-gray-100">
+                    <div className="flex justify-between text-sm">
+                       <span className="text-gray-500">Pasajeros</span>
+                       <span className="font-medium">{numPasajeros}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                       <span className="text-gray-500">Asientos seleccionados</span>
+                       <span className={`font-medium ${selectedSeats.length === numPasajeros ? 'text-green-600' : 'text-orange-500'}`}>
+                         {selectedSeats.length} / {numPasajeros}
+                       </span>
+                    </div>
                   </div>
+
+                  <Button 
+                    className="w-full mt-6 h-12 text-lg shadow-lg hover:shadow-primary/25 transition-all"
+                    disabled={selectedSeats.length !== numPasajeros}
+                    onClick={() => setStep(2)}
+                  >
+                    Continuar
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
+                </Card>
+              </div>
+            </motion.div>
+          )}
+
+          {/* --- PASO 2: FORMULARIOS DE PASAJEROS --- */}
+          {step === 2 && (
+            <motion.div
+              key="step2"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="max-w-3xl mx-auto"
+            >
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-gray-900">Datos de los pasajeros</h2>
+                <p className="text-gray-500">
+                  Ingresa la información para los {numPasajeros} pasajeros
+                </p>
+              </div>
+
+              <div className="space-y-6 mb-8">
+                {passengersData.map((passenger, index) => (
+                  <Card key={index} className="p-6 sm:p-8 shadow-md hover:shadow-lg transition-shadow duration-300 border-l-4 border-l-primary">
+                    <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
+                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <span className="bg-primary text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">
+                                {index + 1}
+                            </span>
+                            Pasajero {index + 1}
+                        </h3>
+                        <div className="text-right">
+                            <p className="text-xs text-gray-500 uppercase tracking-wide">Asiento asignado</p>
+                            <p className="text-xl font-bold text-primary">{selectedSeats[index]?.numero}</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor={`nombre-${index}`}>Nombre(s) *</Label>
+                        <Input
+                          id={`nombre-${index}`}
+                          value={passenger.nombre}
+                          onChange={(e) => updatePassengerData(index, 'nombre', e.target.value)}
+                          placeholder="Ej. Juan Carlos"
+                          className="bg-gray-50 focus:bg-white transition-colors"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor={`apellido-${index}`}>Apellidos *</Label>
+                        <Input
+                          id={`apellido-${index}`}
+                          value={passenger.apellido}
+                          onChange={(e) => updatePassengerData(index, 'apellido', e.target.value)}
+                          placeholder="Ej. Pérez"
+                          className="bg-gray-50 focus:bg-white transition-colors"
+                        />
+                      </div>
+
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label htmlFor={`email-${index}`}>Correo electrónico *</Label>
+                        <Input
+                          id={`email-${index}`}
+                          type="email"
+                          value={passenger.email}
+                          onChange={(e) => updatePassengerData(index, 'email', e.target.value)} 
+                          placeholder="juan@ejemplo.com"
+                          className="bg-gray-50 focus:bg-white transition-colors"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor={`tipoDocumento-${index}`}>Tipo de documento</Label>
+                        <select
+                          id={`tipoDocumento-${index}`}
+                          value={passenger.tipoDocumento}
+                          onChange={(e) => updatePassengerData(index, 'tipoDocumento', e.target.value)}
+                          className="w-full h-10 px-3 py-2 rounded-md border border-input bg-gray-50 text-sm focus:bg-white focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors"
+                        >
+                          <option value="INE">INE / IFE</option>
+                          <option value="Pasaporte">Pasaporte</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor={`numeroDocumento-${index}`}>Número de documento *</Label>
+                        <Input
+                          id={`numeroDocumento-${index}`}
+                          value={passenger.numeroDocumento}
+                          onChange={(e) => updatePassengerData(index, 'numeroDocumento', e.target.value)}
+                          placeholder="ABCD123456"
+                          className="bg-gray-50 focus:bg-white transition-colors"
+                        />
+                      </div>
+                    </div>
+                  </Card>
                 ))}
               </div>
 
-              <p className="text-xs text-gray-500 mt-6">
-                Distribución: 3 asientos - pasillo - 3 asientos (A, B, C | pasillo | D, E, F)
-              </p>
-
-              {selectedSeats.length === 0 && (
-                <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-blue-800 text-center font-medium">
-                    👆 Selecciona {numPasajeros} asiento{numPasajeros > 1 ? 's' : ''} para continuar
-                  </p>
-                </div>
-              )}
-            </Card>
-          </div>
-
-          {/* Formulario de pasajeros */}
-          {selectedSeats.length > 0 && (
-            <div className="lg:col-span-1 space-y-4">
-              {passengersData.map((passenger, index) => (
-                <Card key={index} className="p-6">
-                  <h3 className="text-lg font-bold text-gray-900 mb-4">
-                    Pasajero {index + 1} - Asiento {selectedSeats[index]?.numero || '...'}
-                  </h3>
-
-                  <div className="space-y-3">
-                    <div>
-                      <Label htmlFor={`nombre-${index}`} className="text-sm">Nombre *</Label>
-                      <Input
-                        id={`nombre-${index}`}
-                        value={passenger.nombre}
-                        onChange={(e) => updatePassengerData(index, 'nombre', e.target.value)}
-                        placeholder="Juan"
-                        className="mt-1"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`apellido-${index}`} className="text-sm">Apellido *</Label>
-                      <Input
-                        id={`apellido-${index}`}
-                        value={passenger.apellido}
-                        onChange={(e) => updatePassengerData(index, 'apellido', e.target.value)}
-                        placeholder="García"
-                        className="mt-1"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`email-${index}`} className="text-sm">Email *</Label>
-                      <Input
-                        id={`email-${index}`}
-                        type="email"
-                        value={passenger.email}
-                        onChange={(e) => updatePassengerData(index, 'email', e.target.value)} 
-                        placeholder="juan@email.com"
-                        className="mt-1"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`tipoDocumento-${index}`} className="text-sm">ID *</Label>
-                      <select
-                        id={`tipoDocumento-${index}`}
-                        value={passenger.tipoDocumento}
-                        onChange={(e) => updatePassengerData(index, 'tipoDocumento', e.target.value)}
-                        className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                      >
-                        <option value="INE">INE</option>
-                        <option value="Pasaporte">Pasaporte</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`numeroDocumento-${index}`} className="text-sm">
-                        {passenger.tipoDocumento === 'INE' ? 'Clave elector' : 'No. Pasaporte'} *
-                      </Label>
-                      <Input
-                        id={`numeroDocumento-${index}`}
-                        value={passenger.numeroDocumento}
-                        onChange={(e) => updatePassengerData(index, 'numeroDocumento', e.target.value)}
-                        placeholder={passenger.tipoDocumento === 'INE' ? 'ABCD123456' : 'M12345678'}
-                        className="mt-1"
-                      />
-                    </div>
+              {/* Resumen final y botón de pago */}
+              <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200 sticky bottom-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                      <div className="text-center sm:text-left">
+                          <p className="text-gray-500 text-sm">Total a pagar</p>
+                          <p className="text-3xl font-bold text-primary">${precioTotal.toLocaleString()}</p>
+                      </div>
+                      
+                      <div className="flex gap-3 w-full sm:w-auto">
+                         <Button 
+                            variant="outline" 
+                            onClick={() => setStep(1)}
+                            className="flex-1 sm:flex-none h-12"
+                            disabled={submitting}
+                         >
+                            Volver
+                         </Button>
+                         <Button
+                            onClick={handleContinue}
+                            disabled={submitting}
+                            className="flex-1 sm:flex-none h-12 px-8 text-lg shadow-lg hover:shadow-primary/25"
+                         >
+                            {submitting ? (
+                                <span className="flex items-center gap-2">
+                                    <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                                    Procesando...
+                                </span>
+                            ) : (
+                                <span className="flex items-center gap-2">
+                                    Ir a pagar <CreditCard className="w-5 h-5" />
+                                </span>
+                            )}
+                         </Button>
+                      </div>
                   </div>
-                </Card>
-              ))}
-
-              {/* Resumen y pago */}
-              <Card className="p-6 sticky top-24">
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Precio por asiento</span>
-                    <span className="font-semibold">${flight.precio.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Asientos seleccionados</span>
-                    <span className="font-semibold">{selectedSeats.length}</span>
-                  </div>
-                  <div className="flex justify-between text-lg font-bold pt-3 border-t">
-                    <span>Total</span>
-                    <span className="text-primary">${precioTotal.toLocaleString()}</span>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={handleContinue}
-                  disabled={submitting || selectedSeats.length !== numPasajeros}
-                  className="w-full mt-4"
-                >
-                  {submitting ? 'Procesando...' : (
-                    <>
-                      Continuar con el pago
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </>
-                  )}
-                </Button>
-              </Card>
-            </div>
+              </div>
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
       </div>
     </div>
   );
+
+  function isSelectedSeat(seat: Seat) {
+      return selectedSeats.find(s => s._id === seat._id);
+  }
 }
