@@ -32,7 +32,7 @@ interface Reserva {
   };
   precioTotal: number;
   estado: string;
-  createdAt: string; // 🆕 Agregar fecha de creación
+  createdAt: string; 
 }
 
 export default function CheckoutPage() {
@@ -55,6 +55,7 @@ export default function CheckoutPage() {
   });
 
   // IDs de todas las reservas (puede venir del location.state o ser solo una)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const reservaIds = location.state?.reservaIds || [reservaId];
   const precioTotalState = location.state?.precioTotal;
 
