@@ -136,13 +136,13 @@ export default function FlightCard({ flight, numPasajeros = 1 }: FlightCardProps
               <p className="text-xs text-gray-400">MXN</p>
             </div>
 
-            <Button
-              onClick={handleSelect}
-              className="w-auto md:w-full bg-primary hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all rounded-lg font-semibold"
-            >
-              Seleccionar
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
+          <Button
+            onClick={handleSelect}
+            className="w-auto md:w-full bg-primary hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all rounded-lg font-semibold flex items-center justify-center"
+          >
+            Seleccionar
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
           </div>
         </div>
       </Card>

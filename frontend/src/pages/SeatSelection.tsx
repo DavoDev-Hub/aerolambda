@@ -320,15 +320,15 @@ export default function SeatSelection() {
                             // Pasillo
                             if (col === 'D') {
                               return (
-                                <div key={`${row}-${col}`} className="flex gap-2">
-                                    <div className="w-3 shrink-0 flex justify-center items-center text-[10px] text-gray-200">|</div>
+                                <div key={`${row}-${col}`} className="flex gap-2 items-center">
+                                    <div className="w-1 h-full bg-gray-200/50"></div>
                                     <motion.button
                                       whileTap={{ scale: 0.9 }}
                                       onClick={() => handleSeatClick(seat)}
                                       disabled={seat.estado !== 'disponible'}
                                       className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center text-xs font-bold transition-all duration-200 ${getSeatStyle(seat)}`}
                                     >
-                                      {seat.numero}
+                                      {isSelectedSeat(seat) ? <Check className="w-4 h-4" /> : seat.numero}
                                     </motion.button>
                                 </div>
                               )
@@ -417,14 +417,14 @@ export default function SeatSelection() {
                     </div>
                   </div>
 
-                  <Button 
-                    className="w-full mt-6 h-12 text-lg shadow-lg hover:shadow-primary/25 transition-all"
-                    disabled={selectedSeats.length !== numPasajeros}
-                    onClick={() => setStep(2)}
-                  >
-                    Continuar
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
+                <Button 
+                  className="w-full mt-6 h-12 text-lg shadow-lg hover:shadow-primary/25 transition-all flex items-center justify-center"
+                  disabled={selectedSeats.length !== numPasajeros}
+                  onClick={() => setStep(2)}
+                >
+                  Continuar
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
                 </Card>
               </div>
             </motion.div>
