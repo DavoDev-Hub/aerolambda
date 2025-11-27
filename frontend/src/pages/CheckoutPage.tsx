@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Alert, AlertDescription } from '@/components/ui/Alert';
-import { Shield, CreditCard, Calendar, Lock, Plane, MapPin, Clock, User, AlertCircle } from 'lucide-react';
+import { CreditCard, Calendar, Lock, Plane, MapPin, Clock, User, AlertCircle } from 'lucide-react';
 
 interface Reserva {
   _id: string;
@@ -266,15 +266,6 @@ export default function CheckoutPage() {
     <div className="min-h-screen bg-gradient-to-br from-primary via-blue-700 to-blue-900">
       <Header />
 
-      {/* Security Badge */}
-      <div className="bg-white/95 backdrop-blur-sm border-b border-gray-200 py-3">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-700">
-            <Shield className="w-5 h-5 text-green-600" />
-            <span>Pago seguro con encriptación SSL</span>
-          </div>
-        </div>
-      </div>
 
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* 🆕 Alert de tiempo restante */}

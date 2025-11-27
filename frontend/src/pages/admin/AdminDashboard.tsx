@@ -1,16 +1,15 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { Card } from '@/components/ui/Card';
-import { Plane, Calendar, Users, DollarSign, TrendingUp, Clock } from 'lucide-react';
+import { Plane, Calendar, Users, DollarSign } from 'lucide-react';
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend
 } from 'recharts';
 
 interface Estadisticas {
@@ -26,7 +25,7 @@ interface ReservaMes {
   ingresos: number;
 }
 
-export default function Dashboard() {
+export default function AdminDashboard() {
   const [estadisticas, setEstadisticas] = useState<Estadisticas>({
     vuelosActivos: 0,
     reservasTotales: 0,
@@ -38,184 +37,142 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        
+        // 1. Estadísticas
+        const statsResponse = await fetch('/api/dashboard/estadisticas', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const statsData = await statsResponse.json();
+        if (statsData.success) setEstadisticas(statsData.data);
+
+        // 2. Gráfica
+        const reservasResponse = await fetch('/api/dashboard/reservas-por-mes', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const reservasData = await reservasResponse.json();
+        if (reservasData.success) setReservasPorMes(reservasData.data);
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchDashboardData();
   }, []);
 
-  const fetchDashboardData = async () => {
-    try {
-      const token = localStorage.getItem('token');
-
-      // Obtener estadísticas generales
-      const statsResponse = await fetch('/api/dashboard/estadisticas', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const statsData = await statsResponse.json();
-
-      if (statsData.success) {
-        setEstadisticas(statsData.data);
-      }
-
-      // Obtener reservas por mes
-      const reservasResponse = await fetch('/api/dashboard/reservas-por-mes', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const reservasData = await reservasResponse.json();
-
-      if (reservasData.success) {
-        setReservasPorMes(reservasData.data);
-      }
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <AdminLayout pageTitle="Dashboard">
-        <div className="p-8">
-          <div className="flex items-center justify-center h-96">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-gray-600">Cargando estadísticas...</p>
-            </div>
-          </div>
+  // Tarjeta de Estadística Reutilizable con mejor contraste
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const StatCard = ({ title, value, icon: Icon, colorClass, bgClass }: any) => (
+    <Card className="p-6 border border-slate-100 shadow-sm bg-white relative overflow-hidden group">
+      <div className={`absolute -right-4 -top-4 p-3 opacity-5 group-hover:opacity-10 transition-opacity`}>
+         <Icon className={`w-32 h-32 ${colorClass}`} />
+      </div>
+      
+      <div className="relative z-10 flex flex-col h-full justify-between">
+        <div className={`w-12 h-12 ${bgClass} rounded-xl flex items-center justify-center mb-4`}>
+          <Icon className={`w-6 h-6 ${colorClass}`} />
         </div>
-      </AdminLayout>
-    );
-  }
+        <div>
+            <p className="text-slate-500 text-sm font-semibold mb-1">{title}</p>
+            <h3 className="text-3xl font-bold text-slate-800 tracking-tight">{value}</h3>
+        </div>
+      </div>
+    </Card>
+  );
+
+  if (loading) return (
+    <AdminLayout pageTitle="Panel de Control">
+        <div className="flex items-center justify-center h-full">
+            <div className="text-slate-500">Cargando datos...</div>
+        </div>
+    </AdminLayout>
+  );
 
   return (
-    <AdminLayout pageTitle="Dashboard">
-      <div className="p-8 space-y-8">
-        {/* Header */}
-        <div>
-          <p className="text-gray-600 mt-1">
-            Bienvenido al sistema de gestión de AeroLambda
-          </p>
-        </div>
-
-        {/* Stats Cards */}
+    <AdminLayout pageTitle="Panel de Control">
+      <div className="space-y-8">
+        
+        {/* GRID DE ESTADÍSTICAS - Solo datos reales */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Vuelos Activos */}
-          <Card className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Vuelos Activos</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">
-                  {estadisticas.vuelosActivos}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Plane className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-            <div className="mt-4 flex items-center text-sm">
-              <TrendingUp className="w-4 h-4 text-green-600 mr-1" />
-              <span className="text-green-600 font-medium">Programados</span>
-            </div>
-          </Card>
-
-          {/* Reservas Totales */}
-          <Card className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Reservas Totales</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">
-                  {estadisticas.reservasTotales}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-            <div className="mt-4 flex items-center text-sm">
-              <Clock className="w-4 h-4 text-gray-500 mr-1" />
-              <span className="text-gray-600">Todas las reservas</span>
-            </div>
-          </Card>
-
-          {/* Clientes */}
-          <Card className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Clientes</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">
-                  {estadisticas.totalClientes}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Users className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
-            <div className="mt-4 flex items-center text-sm">
-              <span className="text-gray-600">Usuarios registrados</span>
-            </div>
-          </Card>
-
-          {/* Ingresos */}
-          <Card className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Ingresos</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">
-                  ${estadisticas.ingresosTotales.toLocaleString()}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-orange-600" />
-              </div>
-            </div>
-            <div className="mt-4 flex items-center text-sm">
-              <TrendingUp className="w-4 h-4 text-green-600 mr-1" />
-              <span className="text-green-600 font-medium">MXN</span>
-            </div>
-          </Card>
+          <StatCard 
+            title="Ingresos Totales" 
+            value={`$${estadisticas.ingresosTotales.toLocaleString()}`} 
+            icon={DollarSign}
+            colorClass="text-emerald-600"
+            bgClass="bg-emerald-50"
+          />
+          <StatCard 
+            title="Reservas Totales" 
+            value={estadisticas.reservasTotales}
+            icon={Calendar}
+            colorClass="text-blue-600"
+            bgClass="bg-blue-50"
+          />
+          <StatCard 
+            title="Vuelos Activos" 
+            value={estadisticas.vuelosActivos}
+            icon={Plane}
+            colorClass="text-indigo-600"
+            bgClass="bg-indigo-50"
+          />
+          <StatCard 
+            title="Clientes" 
+            value={estadisticas.totalClientes}
+            icon={Users}
+            colorClass="text-orange-600"
+            bgClass="bg-orange-50"
+          />
         </div>
 
-        {/* Chart */}
-        <Card className="p-6">
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Reservas por Mes</h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Estadísticas de reservas del año {new Date().getFullYear()}
-            </p>
-          </div>
+        {/* GRÁFICA PRINCIPAL - Ocupa todo el ancho ahora que quitamos lo fake */}
+        <Card className="p-6 border border-slate-100 shadow-sm bg-white">
+            <div className="mb-8">
+                <h3 className="text-lg font-bold text-slate-800">Tendencia de Reservas</h3>
+                <p className="text-sm text-slate-500">Reservas realizadas durante el año</p>
+            </div>
 
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={reservasPorMes}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis
-                  dataKey="mes"
-                  stroke="#6b7280"
-                  style={{ fontSize: '12px' }}
-                />
-                <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#fff',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                  }}
-                />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="cantidad"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  name="Reservas"
-                  dot={{ fill: '#3b82f6', r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+            <div className="h-[400px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={reservasPorMes}>
+                    <defs>
+                    <linearGradient id="colorReservas" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis 
+                        dataKey="mes" 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{fill: '#64748b', fontSize: 12}} 
+                        dy={10}
+                    />
+                    <YAxis 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{fill: '#64748b', fontSize: 12}} 
+                    />
+                    <Tooltip 
+                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                    />
+                    <Area 
+                        type="monotone" 
+                        dataKey="cantidad" 
+                        stroke="#3b82f6" 
+                        strokeWidth={3}
+                        fillOpacity={1} 
+                        fill="url(#colorReservas)" 
+                        name="Reservas"
+                    />
+                </AreaChart>
+                </ResponsiveContainer>
+            </div>
         </Card>
 
-        {/* Quick Actions or Recent Activity could go here */}
       </div>
     </AdminLayout>
   );

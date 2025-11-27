@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Download, FileText, TrendingUp } from 'lucide-react';
+import { Download, TrendingUp, Ticket, Award } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -35,7 +35,7 @@ interface TopCliente {
   gastoTotal: number;
 }
 
-export default function Reports() {
+export default function AdminReports() {
   const [ingresosPorVuelo, setIngresosPorVuelo] = useState<IngresoVuelo[]>([]);
   const [reservasPorVuelo, setReservasPorVuelo] = useState<ReservaVuelo[]>([]);
   const [topClientes, setTopClientes] = useState<TopCliente[]>([]);
@@ -49,32 +49,23 @@ export default function Reports() {
     try {
       const token = localStorage.getItem('token');
 
-      // Obtener ingresos por vuelo
       const ingresosResponse = await fetch('/api/dashboard/ingresos-por-vuelo', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const ingresosData = await ingresosResponse.json();
-      if (ingresosData.success) {
-        setIngresosPorVuelo(ingresosData.data);
-      }
+      if (ingresosData.success) setIngresosPorVuelo(ingresosData.data);
 
-      // Obtener reservas por vuelo
       const reservasResponse = await fetch('/api/dashboard/reservas-por-vuelo', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const reservasData = await reservasResponse.json();
-      if (reservasData.success) {
-        setReservasPorVuelo(reservasData.data);
-      }
+      if (reservasData.success) setReservasPorVuelo(reservasData.data);
 
-      // Obtener top clientes
       const clientesResponse = await fetch('/api/dashboard/top-clientes', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const clientesData = await clientesResponse.json();
-      if (clientesData.success) {
-        setTopClientes(clientesData.data);
-      }
+      if (clientesData.success) setTopClientes(clientesData.data);
     } catch (error) {
       console.error('Error fetching reports data:', error);
     } finally {
@@ -86,25 +77,21 @@ export default function Reports() {
     const doc = new jsPDF();
     const fecha = new Date().toLocaleDateString('es-MX');
 
-    // Título
     doc.setFontSize(20);
-    doc.setTextColor(37, 99, 235); // primary color
-    doc.text('AeroLambda - Reporte de Análisis', 14, 22);
+    doc.setTextColor(37, 99, 235);
+    doc.text('AeroLambda - Reporte Ejecutivo', 14, 22);
     
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text(`Fecha de generación: ${fecha}`, 14, 30);
-
-    // Línea separadora
-    doc.setDrawColor(200);
+    doc.text(`Generado el: ${fecha}`, 14, 30);
     doc.line(14, 35, 196, 35);
 
     let yPosition = 45;
 
-    // Sección 1: Ingresos por Vuelo
+    // Tabla 1
     doc.setFontSize(14);
     doc.setTextColor(0);
-    doc.text('Ingresos por Vuelo', 14, yPosition);
+    doc.text('Rendimiento Financiero por Vuelo', 14, yPosition);
     yPosition += 10;
 
     autoTable(doc, {
@@ -118,42 +105,13 @@ export default function Reports() {
       ]),
       theme: 'grid',
       headStyles: { fillColor: [37, 99, 235] },
-      margin: { left: 14, right: 14 },
     });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     yPosition = (doc as any).lastAutoTable.finalY + 15;
 
-    // Sección 2: Reservas por Vuelo
-    doc.setFontSize(14);
-    doc.text('Reservas por Vuelo', 14, yPosition);
-    yPosition += 10;
-
-    autoTable(doc, {
-      startY: yPosition,
-      head: [['Vuelo', 'Ruta', 'Total Reservas']],
-      body: reservasPorVuelo.map(item => [
-        item.numeroVuelo,
-        item.ruta,
-        item.totalReservas.toString()
-      ]),
-      theme: 'grid',
-      headStyles: { fillColor: [16, 185, 129] },
-      margin: { left: 14, right: 14 },
-    });
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    yPosition = (doc as any).lastAutoTable.finalY + 15;
-
-    // Nueva página si es necesario
-    if (yPosition > 250) {
-      doc.addPage();
-      yPosition = 20;
-    }
-
-    // Sección 3: Top Clientes
-    doc.setFontSize(14);
-    doc.text('Top Clientes', 14, yPosition);
+    // Tabla 2
+    doc.text('Top Clientes (Loyalty)', 14, yPosition);
     yPosition += 10;
 
     autoTable(doc, {
@@ -166,167 +124,191 @@ export default function Reports() {
         `$${item.gastoTotal.toLocaleString()} MXN`
       ]),
       theme: 'grid',
-      headStyles: { fillColor: [147, 51, 234] },
-      margin: { left: 14, right: 14 },
+      headStyles: { fillColor: [16, 185, 129] },
     });
 
-    // Footer
-    const pageCount = doc.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(150);
-      doc.text(
-        `Página ${i} de ${pageCount}`,
-        doc.internal.pageSize.width / 2,
-        doc.internal.pageSize.height - 10,
-        { align: 'center' }
-      );
-    }
-
-    // Guardar PDF
     doc.save(`AeroLambda_Reporte_${fecha.replace(/\//g, '-')}.pdf`);
+  };
+
+  // Helper para ranking
+  const getRankStyle = (index: number) => {
+    switch (index) {
+        case 0: return 'bg-yellow-100 text-yellow-700 border-yellow-200'; // Oro
+        case 1: return 'bg-slate-200 text-slate-700 border-slate-300';   // Plata
+        case 2: return 'bg-orange-100 text-orange-800 border-orange-200'; // Bronce
+        default: return 'bg-slate-50 text-slate-500 border-slate-100';
+    }
+  };
+
+  const getRankIcon = (index: number) => {
+      if (index === 0) return '👑';
+      if (index === 1) return '🥈';
+      if (index === 2) return '🥉';
+      return `#${index + 1}`;
   };
 
   if (loading) {
     return (
       <AdminLayout pageTitle="Reportes">
-        <div className="p-8">
-          <div className="flex items-center justify-center h-96">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-gray-600">Cargando reportes...</p>
-            </div>
-          </div>
-        </div>
+        <div className="flex items-center justify-center h-full text-slate-500">Generando análisis...</div>
       </AdminLayout>
     );
   }
 
   return (
-    <AdminLayout pageTitle="Reportes">
-      <div className="p-8 space-y-8">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+    <AdminLayout pageTitle="Reportes y Análisis">
+      <div className="space-y-8 pb-10">
+        
+        {/* HEADER DE SECCIÓN */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
           <div>
-            <p className="text-gray-600 mt-1">
-              Análisis detallado de rendimiento y estadísticas
-            </p>
+            <h3 className="text-lg font-bold text-slate-800">Resumen Ejecutivo</h3>
+            <p className="text-sm text-slate-500">Visualiza el rendimiento financiero y operativo de la aerolínea.</p>
           </div>
           <Button
             onClick={descargarReporte}
-            className="flex items-center gap-2 bg-primary text-white"
+            className="bg-slate-900 hover:bg-slate-800 text-white flex items-center gap-2 shadow-lg shadow-slate-900/20 transition-all"
           >
-            <Download className="w-5 h-5" />
-            Descargar Reporte PDF
+            <Download className="w-4 h-4" />
+            Exportar PDF
           </Button>
         </div>
 
-        {/* Gráficas */}
+        {/* GRÁFICAS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
           {/* Ingresos por Vuelo */}
-          <Card className="p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <TrendingUp className="w-5 h-5 text-blue-600" />
-              <h2 className="text-xl font-bold text-gray-900">Ingresos por Vuelo</h2>
+          <Card className="p-6 border border-slate-100 shadow-sm bg-white">
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
+                        <TrendingUp className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-bold text-slate-800">Ingresos por Vuelo</h2>
+                        <p className="text-xs text-slate-500">Top vuelos con mayor recaudación</p>
+                    </div>
+                </div>
             </div>
+            
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={ingresosPorVuelo}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis
-                    dataKey="numeroVuelo"
-                    stroke="#6b7280"
-                    style={{ fontSize: '12px' }}
-                  />
-                  <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#fff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                    }}
+                <BarChart data={ingresosPorVuelo} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="blueGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#3b82f6" stopOpacity={1}/>
+                      <stop offset="100%" stopColor="#60a5fa" stopOpacity={0.8}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="numeroVuelo" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} />
+                  <Tooltip 
+                    cursor={{fill: '#f8fafc'}}
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
                     formatter={(value: number) => [`$${value.toLocaleString()}`, 'Ingresos']}
                   />
-                  <Bar dataKey="totalIngresos" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="totalIngresos" fill="url(#blueGradient)" radius={[6, 6, 0, 0]} barSize={40} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </Card>
 
           {/* Reservas por Vuelo */}
-          <Card className="p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <FileText className="w-5 h-5 text-green-600" />
-              <h2 className="text-xl font-bold text-gray-900">Reservas por Vuelo</h2>
+          <Card className="p-6 border border-slate-100 shadow-sm bg-white">
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600">
+                        <Ticket className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-bold text-slate-800">Volumen de Reservas</h2>
+                        <p className="text-xs text-slate-500">Vuelos con mayor demanda</p>
+                    </div>
+                </div>
             </div>
+
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={reservasPorVuelo}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis
-                    dataKey="numeroVuelo"
-                    stroke="#6b7280"
-                    style={{ fontSize: '12px' }}
+                <BarChart data={reservasPorVuelo} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="emeraldGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity={1}/>
+                      <stop offset="100%" stopColor="#34d399" stopOpacity={0.8}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="numeroVuelo" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} />
+                  <Tooltip 
+                    cursor={{fill: '#f8fafc'}}
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
                   />
-                  <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#fff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Bar dataKey="totalReservas" fill="#10b981" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="totalReservas" fill="url(#emeraldGradient)" radius={[6, 6, 0, 0]} barSize={40} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </Card>
         </div>
 
-        {/* Tabla de Top Clientes */}
-        <Card className="overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900">Top Clientes</h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Clientes con mayor número de reservas y gasto total
-            </p>
+        {/* LEADERBOARD DE CLIENTES */}
+        <Card className="overflow-hidden border border-slate-200 shadow-sm bg-white">
+          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-50 rounded-lg text-purple-600">
+                    <Award className="w-5 h-5" />
+                </div>
+                <div>
+                    <h2 className="text-lg font-bold text-slate-800">Top Clientes</h2>
+                    <p className="text-xs text-slate-500">Usuarios con mayor gasto acumulado</p>
+                </div>
+            </div>
           </div>
+          
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-slate-50/50 border-b border-slate-100">
                 <tr>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-600 uppercase">#</th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-600 uppercase">Nombre</th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-600 uppercase">Reservas</th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-600 uppercase">Gasto Total</th>
+                  <th className="text-center px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider w-20">Rank</th>
+                  <th className="text-left px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Cliente</th>
+                  <th className="text-right px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Reservas</th>
+                  <th className="text-right px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Gasto Total</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-slate-50">
                 {topClientes.map((cliente, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{index + 1}</td>
+                  <tr key={index} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="px-6 py-4 text-center">
+                        <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold border ${getRankStyle(index)}`}>
+                            {getRankIcon(index)}
+                        </span>
+                    </td>
                     <td className="px-6 py-4">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{cliente.nombre}</p>
-                        <p className="text-xs text-gray-500">{cliente.email}</p>
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs">
+                            {cliente.nombre.charAt(0)}{cliente.email.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <p className="text-sm font-bold text-slate-700">{cliente.nombre}</p>
+                            <p className="text-xs text-slate-400">{cliente.email}</p>
+                        </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{cliente.totalReservas}</td>
-                    <td className="px-6 py-4 text-sm font-semibold text-primary">
-                      ${cliente.gastoTotal.toLocaleString()} MXN
+                    <td className="px-6 py-4 text-right">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                            {cliente.totalReservas} vuelos
+                        </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <span className="font-mono font-bold text-emerald-600">
+                        ${cliente.gastoTotal.toLocaleString()}
+                      </span>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-
-          {topClientes.length === 0 && (
-            <div className="p-8 text-center">
-              <p className="text-gray-500">No hay datos de clientes disponibles</p>
-            </div>
-          )}
         </Card>
       </div>
     </AdminLayout>

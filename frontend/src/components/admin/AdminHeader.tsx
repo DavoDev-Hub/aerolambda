@@ -1,4 +1,4 @@
-import { User } from 'lucide-react';
+import { User } from 'lucide-react'; // Quitamos Bell y Search si no son funcionales
 import { useEffect, useState } from 'react';
 
 interface AdminHeaderProps {
@@ -16,26 +16,23 @@ export default function AdminHeader({ pageTitle }: AdminHeaderProps) {
     }
   }, []);
 
-  const titles: Record<string, string> = {
-    'Dashboard': 'Panel de Control',
-    'Vuelos': 'Gestión de Vuelos',
-    'Reservas': 'Gestión de Reservas',
-    'Reportes': 'Reportes y Análisis',
-  };
-
   return (
-    <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-8 shadow-sm">
-      <h2 className="text-2xl font-bold text-gray-900">
-        {titles[pageTitle] || pageTitle}
-      </h2>
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 text-gray-900">
-          <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-            <User className="w-5 h-5 text-white" />
+    <header className="h-20 bg-white sticky top-0 z-40 px-8 flex items-center justify-between border-b border-slate-200 shadow-sm">
+      <div>
+        <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
+          {pageTitle}
+        </h2>
+      </div>
+
+      <div className="flex items-center gap-6">
+        {/* Perfil Simplificado */}
+        <div className="flex items-center gap-3 pl-6">
+          <div className="text-right hidden md:block">
+            <p className="text-sm font-bold text-slate-700">{userName}</p>
+            <p className="text-xs text-slate-500 font-medium">Administrador</p>
           </div>
-          <div>
-            <p className="text-sm font-medium">{userName}</p>
-            <p className="text-xs text-gray-500">Administrador</p>
+          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 border border-blue-200 shadow-sm">
+            <User className="w-5 h-5" />
           </div>
         </div>
       </div>

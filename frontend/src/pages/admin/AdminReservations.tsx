@@ -2,8 +2,17 @@ import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
-import { Eye } from 'lucide-react';
+import { 
+  Eye, 
+  Search, 
+  Filter, 
+  Calendar, 
+  CheckCircle2, 
+  XCircle, 
+  Clock, 
+  User,
+  Ticket
+} from 'lucide-react';
 
 interface Reservation {
   _id: string;
@@ -33,6 +42,8 @@ interface Reservation {
 export default function AdminReservations() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterEstado, setFilterEstado] = useState('');
 
   useEffect(() => {
     fetchReservations();
@@ -56,142 +67,235 @@ export default function AdminReservations() {
     }
   };
 
-  const getStatusColor = (estado: string) => {
+  const getStatusStyle = (estado: string) => {
     switch (estado) {
       case 'confirmada':
-        return 'bg-green-100 text-green-800';
+        return 'bg-emerald-100 text-emerald-700 border-emerald-200';
       case 'pendiente':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-amber-100 text-amber-700 border-amber-200';
       case 'cancelada':
-        return 'bg-red-100 text-red-800';
+        return 'bg-rose-100 text-rose-700 border-rose-200';
       case 'completada':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-slate-100 text-slate-700 border-slate-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-700';
     }
   };
 
-  const getStatusLabel = (estado: string) => {
-    const labels: Record<string, string> = {
-      'confirmada': 'Confirmada',
-      'pendiente': 'Pendiente',
-      'cancelada': 'Cancelada',
-      'completada': 'Completada',
-    };
-    return labels[estado] || estado;
+  // Filtrado
+  const filteredReservations = reservations.filter(res => {
+    const matchesSearch = 
+      res.codigoReserva.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      res.usuario?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      res.pasajero.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesEstado = filterEstado ? res.estado === filterEstado : true;
+
+    return matchesSearch && matchesEstado;
+  });
+
+  // Estadísticas rápidas
+  const stats = {
+    total: reservations.length,
+    confirmadas: reservations.filter(r => r.estado === 'confirmada').length,
+    pendientes: reservations.filter(r => r.estado === 'pendiente').length,
+    canceladas: reservations.filter(r => r.estado === 'cancelada').length,
   };
 
   if (loading) {
     return (
       <AdminLayout pageTitle="Reservas">
-        <div className="p-8">
-          <div className="flex items-center justify-center h-96">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-gray-600">Cargando reservas...</p>
-            </div>
-          </div>
-        </div>
+        <div className="flex items-center justify-center h-full text-slate-500">Cargando reservas...</div>
       </AdminLayout>
     );
   }
 
   return (
-    <AdminLayout pageTitle="Reservas">
-      <div className="p-8 space-y-6">
-        {/* Stats rápidas */}
+    <AdminLayout pageTitle="Gestión de Reservas">
+      <div className="space-y-6">
+        
+        {/* TOP BAR: Stats Cards con Iconos y Colores */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="p-4">
-            <p className="text-sm text-gray-600 mb-1">Total Reservas</p>
-            <p className="text-2xl font-bold text-gray-900">{reservations.length}</p>
+          <Card className="p-4 flex items-center gap-4 border-l-4 border-l-blue-500 shadow-sm relative overflow-hidden group">
+            <div className="p-3 rounded-full bg-blue-50 text-blue-600 z-10">
+                <Ticket className="w-6 h-6" />
+            </div>
+            <div className="z-10">
+                <p className="text-sm text-slate-500 font-medium">Total Reservas</p>
+                <p className="text-2xl font-bold text-slate-800">{stats.total}</p>
+            </div>
+            <Ticket className="absolute -right-4 -bottom-4 w-24 h-24 text-blue-50 group-hover:scale-110 transition-transform" />
           </Card>
-          <Card className="p-4">
-            <p className="text-sm text-gray-600 mb-1">Confirmadas</p>
-            <p className="text-2xl font-bold text-green-600">
-              {reservations.filter(r => r.estado === 'confirmada').length}
-            </p>
+
+          <Card className="p-4 flex items-center gap-4 border-l-4 border-l-emerald-500 shadow-sm relative overflow-hidden group">
+            <div className="p-3 rounded-full bg-emerald-50 text-emerald-600 z-10">
+                <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <div className="z-10">
+                <p className="text-sm text-slate-500 font-medium">Confirmadas</p>
+                <p className="text-2xl font-bold text-slate-800">{stats.confirmadas}</p>
+            </div>
+            <CheckCircle2 className="absolute -right-4 -bottom-4 w-24 h-24 text-emerald-50 group-hover:scale-110 transition-transform" />
           </Card>
-          <Card className="p-4">
-            <p className="text-sm text-gray-600 mb-1">Pendientes</p>
-            <p className="text-2xl font-bold text-yellow-600">
-              {reservations.filter(r => r.estado === 'pendiente').length}
-            </p>
+
+          <Card className="p-4 flex items-center gap-4 border-l-4 border-l-amber-500 shadow-sm relative overflow-hidden group">
+            <div className="p-3 rounded-full bg-amber-50 text-amber-600 z-10">
+                <Clock className="w-6 h-6" />
+            </div>
+            <div className="z-10">
+                <p className="text-sm text-slate-500 font-medium">Pendientes</p>
+                <p className="text-2xl font-bold text-slate-800">{stats.pendientes}</p>
+            </div>
+            <Clock className="absolute -right-4 -bottom-4 w-24 h-24 text-amber-50 group-hover:scale-110 transition-transform" />
           </Card>
-          <Card className="p-4">
-            <p className="text-sm text-gray-600 mb-1">Canceladas</p>
-            <p className="text-2xl font-bold text-red-600">
-              {reservations.filter(r => r.estado === 'cancelada').length}
-            </p>
+
+          <Card className="p-4 flex items-center gap-4 border-l-4 border-l-rose-500 shadow-sm relative overflow-hidden group">
+            <div className="p-3 rounded-full bg-rose-50 text-rose-600 z-10">
+                <XCircle className="w-6 h-6" />
+            </div>
+            <div className="z-10">
+                <p className="text-sm text-slate-500 font-medium">Canceladas</p>
+                <p className="text-2xl font-bold text-slate-800">{stats.canceladas}</p>
+            </div>
+            <XCircle className="absolute -right-4 -bottom-4 w-24 h-24 text-rose-50 group-hover:scale-110 transition-transform" />
           </Card>
         </div>
 
-        {/* Tabla de reservas */}
-        <Card className="overflow-hidden">
+        {/* TOOLBAR: Buscador y Filtros */}
+        <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+            <div className="flex flex-1 gap-3 w-full md:w-auto">
+                <div className="relative group flex-1 md:max-w-md">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                    <input
+                        type="text"
+                        placeholder="Buscar por código, email o pasajero..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-9 pr-4 py-2.5 bg-slate-50 border-none rounded-lg text-sm w-full focus:ring-2 focus:ring-blue-500 transition-all"
+                    />
+                </div>
+                
+                <div className="relative">
+                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <select
+                        value={filterEstado}
+                        onChange={(e) => setFilterEstado(e.target.value)}
+                        className="pl-9 pr-8 py-2.5 bg-slate-50 border-none rounded-lg text-sm text-slate-600 focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none min-w-[160px]"
+                    >
+                        <option value="">Estado: Todos</option>
+                        <option value="confirmada">Confirmada</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="cancelada">Cancelada</option>
+                        <option value="completada">Completada</option>
+                    </select>
+                </div>
+            </div>
+            
+            {/* Botón de exportar (visual) */}
+            <Button variant="outline" className="border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900">
+                <Calendar className="w-4 h-4 mr-2" />
+                Filtrar Fecha
+            </Button>
+        </div>
+
+        {/* TABLA DE RESERVAS */}
+        <Card className="overflow-hidden border border-slate-200 shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-100 border-b border-gray-200">
+              <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="text-left px-6 py-3 font-semibold text-gray-900">Código</th>
-                  <th className="text-left px-6 py-3 font-semibold text-gray-900">Cliente</th>
-                  <th className="text-left px-6 py-3 font-semibold text-gray-900">Vuelo</th>
-                  <th className="text-left px-6 py-3 font-semibold text-gray-900">Ruta</th>
-                  <th className="text-left px-6 py-3 font-semibold text-gray-900">Pasajero</th>
-                  <th className="text-left px-6 py-3 font-semibold text-gray-900">Asiento</th>
-                  <th className="text-left px-6 py-3 font-semibold text-gray-900">Precio</th>
-                  <th className="text-left px-6 py-3 font-semibold text-gray-900">Estado</th>
-                  <th className="text-left px-6 py-3 font-semibold text-gray-900">Acciones</th>
+                  <th className="text-left px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Código</th>
+                  <th className="text-left px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Cliente</th>
+                  <th className="text-left px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Vuelo</th>
+                  <th className="text-left px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Ruta</th>
+                  <th className="text-left px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Asiento</th>
+                  <th className="text-left px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Total</th>
+                  <th className="text-left px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Estado</th>
+                  <th className="text-right px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Acción</th>
                 </tr>
               </thead>
-              <tbody>
-                {reservations.map((reservation) => (
-                  <tr key={reservation._id} className="border-b border-gray-200 hover:bg-gray-50">
-                    <td className="px-6 py-4 font-semibold text-gray-900 font-mono text-sm">
-                      {reservation.codigoReserva}
+              <tbody className="divide-y divide-slate-100">
+                {filteredReservations.map((reservation) => (
+                  <tr key={reservation._id} className="hover:bg-slate-50/80 transition-colors group">
+                    
+                    {/* Código */}
+                    <td className="px-6 py-4">
+                        <span className="font-mono text-sm font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded">
+                            {reservation.codigoReserva}
+                        </span>
+                        <p className="text-xs text-slate-400 mt-1">
+                            {new Date(reservation.createdAt).toLocaleDateString()}
+                        </p>
                     </td>
+
+                    {/* Cliente */}
                     <td className="px-6 py-4">
                       {reservation.usuario ? (
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            {reservation.usuario.nombre} {reservation.usuario.apellido}
-                          </p>
-                          <p className="text-xs text-gray-500">{reservation.usuario.email}</p>
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xs font-bold">
+                                {reservation.usuario.nombre.charAt(0)}{reservation.usuario.apellido.charAt(0)}
+                            </div>
+                            <div>
+                                <p className="font-medium text-slate-800 text-sm">
+                                    {reservation.usuario.nombre} {reservation.usuario.apellido}
+                                </p>
+                                <p className="text-xs text-slate-500 max-w-[150px] truncate" title={reservation.usuario.email}>
+                                    {reservation.usuario.email}
+                                </p>
+                            </div>
                         </div>
                       ) : (
-                        <p className="text-sm text-gray-400">Usuario eliminado</p>
+                        <div className="flex items-center gap-2 text-slate-400 italic text-sm">
+                            <User className="w-4 h-4" /> Usuario eliminado
+                        </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 font-semibold text-gray-900">
+
+                    {/* Vuelo */}
+                    <td className="px-6 py-4 text-sm font-semibold text-slate-700">
                       {reservation.vuelo?.numeroVuelo || 'N/A'}
                     </td>
+
+                    {/* Ruta */}
                     <td className="px-6 py-4">
                       {reservation.vuelo ? (
-                        <span>{reservation.vuelo.origen.codigo} → {reservation.vuelo.destino.codigo}</span>
+                        <div className="flex items-center gap-1.5 text-sm text-slate-600">
+                            <span className="font-medium">{reservation.vuelo.origen.codigo}</span>
+                            <span className="text-slate-300">→</span>
+                            <span className="font-medium">{reservation.vuelo.destino.codigo}</span>
+                        </div>
                       ) : (
-                        <span className="text-gray-400">Vuelo eliminado</span>
+                        <span className="text-slate-400 text-sm">--</span>
                       )}
                     </td>
+
+                    {/* Asiento */}
                     <td className="px-6 py-4">
-                      {reservation.pasajero.nombre} {reservation.pasajero.apellido}
+                        <span className="inline-flex items-center justify-center w-8 h-8 rounded bg-slate-100 text-slate-700 font-bold text-sm border border-slate-200">
+                            {reservation.asiento?.numero || '?'}
+                        </span>
                     </td>
-                    <td className="px-6 py-4 font-semibold text-gray-900">
-                      {reservation.asiento?.numero || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 font-semibold text-gray-900">
+
+                    {/* Precio */}
+                    <td className="px-6 py-4 font-mono font-medium text-slate-700">
                       ${reservation.precioTotal.toLocaleString()}
                     </td>
+
+                    {/* Estado */}
                     <td className="px-6 py-4">
-                      <Badge className={getStatusColor(reservation.estado)}>
-                        {getStatusLabel(reservation.estado)}
-                      </Badge>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border capitalize ${getStatusStyle(reservation.estado)}`}>
+                        {reservation.estado}
+                      </span>
                     </td>
-                    <td className="px-6 py-4 flex gap-2">
+
+                    {/* Acciones */}
+                    <td className="px-6 py-4 text-right">
                       <Button 
                         size="sm" 
                         variant="outline"
-                        onClick={() => {
-                          // TODO: Implementar modal de detalles
-                          alert(`Ver detalles de reserva: ${reservation.codigoReserva}`);
-                        }}
+                        className="h-8 w-8 p-0 border-slate-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => alert(`Detalles de: ${reservation.codigoReserva}`)}
+                        title="Ver detalles"
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
@@ -201,13 +305,13 @@ export default function AdminReservations() {
               </tbody>
             </table>
           </div>
-        </Card>
 
-        {reservations.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No hay reservas disponibles</p>
-          </div>
-        )}
+          {filteredReservations.length === 0 && (
+            <div className="p-12 text-center text-slate-500">
+                No se encontraron reservas con esos criterios.
+            </div>
+          )}
+        </Card>
       </div>
     </AdminLayout>
   );

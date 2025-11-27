@@ -152,7 +152,7 @@ export default function FlightSearchResults() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gray-50/50">
       <Header />
       
       {/* Search Header con animación */}

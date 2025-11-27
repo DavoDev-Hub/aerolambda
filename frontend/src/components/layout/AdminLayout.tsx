@@ -12,29 +12,33 @@ export default function AdminLayout({ children, pageTitle }: AdminLayoutProps) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Verificar autenticación
+    // Verificar autenticación y rol
     const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
+    const userStr = localStorage.getItem('user');
 
-    if (!token || !user) {
+    if (!token || !userStr) {
       navigate('/login');
       return;
     }
 
-    // Verificar que sea admin
-    const userData = JSON.parse(user);
+    const userData = JSON.parse(userStr);
     if (userData.rol !== 'admin') {
-      alert('No tienes permisos de administrador');
+      // Si no es admin, mandar al home de cliente
       navigate('/');
     }
   }, [navigate]);
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-slate-50">
+      {/* Sidebar fija a la izquierda */}
       <Sidebar />
-      <div className="flex-1 ml-64 flex flex-col overflow-hidden">
+
+      {/* Contenedor Principal: Agregamos ml-72 para dejar espacio a la Sidebar */}
+      <div className="flex-1 flex flex-col ml-72 transition-all duration-300">
         <AdminHeader pageTitle={pageTitle} />
-        <main className="flex-1 overflow-y-auto">
+        
+        {/* Main Content con padding adecuado */}
+        <main className="flex-1 p-8 overflow-y-auto">
           {children}
         </main>
       </div>
