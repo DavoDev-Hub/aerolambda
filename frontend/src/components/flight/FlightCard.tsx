@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { motion } from 'framer-motion';
 
-// Reutilizamos tu interfaz Flight existente (asegúrate de que coincida con tu archivo original)
 export interface Flight {
   _id?: string;
   id?: string;
@@ -19,6 +18,19 @@ export interface Flight {
   horaLlegada: string;
   duracion: string;
   precio: number;
+  equipaje?: {
+    mano: {
+      permitido: boolean;
+      peso: number;
+      dimensiones: string;
+    };
+    documentado: {
+      permitido: boolean;
+      peso: number;
+      piezas: number;
+      precioExtra: number;
+    };
+  };
   asientosDisponibles: number;
   capacidadTotal: number;
   estado: string;
@@ -28,7 +40,7 @@ export interface Flight {
 interface FlightCardProps {
   flight: Flight;
   numPasajeros?: number;
-  isBestValue?: boolean; // Nuevo prop opcional para destacar vuelos
+  isBestValue?: boolean;
 }
 
 export default function FlightCard({ flight, numPasajeros = 1, isBestValue }: FlightCardProps) {
@@ -40,13 +52,16 @@ export default function FlightCard({ flight, numPasajeros = 1, isBestValue }: Fl
     });
   };
 
+  // Valores por defecto si no existe equipaje
+  const equipajeMano = flight.equipaje?.mano || { permitido: true, peso: 10, dimensiones: '55x40x20 cm' };
+  const equipajeDocumentado = flight.equipaje?.documentado || { permitido: true, peso: 23, piezas: 1, precioExtra: 500 };
+
   return (
     <motion.div
       whileHover={{ y: -4, scale: 1.01 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
       className="relative"
     >
-      {/* Etiqueta flotante de "Mejor opción" si aplica */}
       {isBestValue && (
         <div className="absolute -top-3 left-6 z-10 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
           ⭐ Mejor Precio
@@ -84,7 +99,9 @@ export default function FlightCard({ flight, numPasajeros = 1, isBestValue }: Fl
               <div className="text-left w-24">
                 <p className="text-3xl font-bold text-gray-900">{flight.horaSalida}</p>
                 <p className="text-lg font-semibold text-gray-600">{flight.origen.codigo}</p>
-                <p className="text-xs text-gray-400 truncate">{flight.origen.ciudad}</p>
+                <p className="text-xs text-gray-400 truncate" title={flight.origen.aeropuerto}>
+                  {flight.origen.aeropuerto}
+                </p>
               </div>
 
               {/* Línea de tiempo animada */}
@@ -95,7 +112,6 @@ export default function FlightCard({ flight, numPasajeros = 1, isBestValue }: Fl
                 <div className="w-full relative flex items-center">
                   <div className="w-2 h-2 rounded-full bg-blue-200"></div>
                   <div className="flex-1 h-[2px] bg-gray-200 relative mx-1">
-                    {/* Avión en la línea */}
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-1.5 rounded-full border border-gray-200 shadow-sm group-hover:border-blue-400 group-hover:shadow-md transition-all">
                       <Plane className="w-3 h-3 text-blue-400 transform rotate-90" />
                     </div>
@@ -109,38 +125,50 @@ export default function FlightCard({ flight, numPasajeros = 1, isBestValue }: Fl
               <div className="text-right w-24">
                 <p className="text-3xl font-bold text-gray-900">{flight.horaLlegada}</p>
                 <p className="text-lg font-semibold text-gray-600">{flight.destino.codigo}</p>
-                <p className="text-xs text-gray-400 truncate">{flight.destino.ciudad}</p>
+                <p className="text-xs text-gray-400 truncate" title={flight.destino.aeropuerto}>
+                  {flight.destino.aeropuerto}
+                </p>
               </div>
             </div>
             
-            {/* Extras */}
+            {/* Equipaje - INFORMACIÓN DINÁMICA */}
             <div className="mt-8 flex items-center gap-6 pt-4 border-t border-gray-100 text-xs text-gray-500 font-medium">
-               <div className="flex items-center gap-1.5">
-                   <Briefcase className="w-4 h-4 text-blue-400" />
-                   <span>Equipaje de mano</span>
-               </div>
-               <div className="flex items-center gap-1.5">
-                   <Luggage className="w-4 h-4 text-blue-400" />
-                   <span>1 maleta (25kg)</span>
-               </div>
+              {equipajeMano.permitido && (
+                <div className="flex items-center gap-1.5">
+                  <Briefcase className="w-4 h-4 text-blue-400" />
+                  <span>Mano: {equipajeMano.peso}kg</span>
+                </div>
+              )}
+              {equipajeDocumentado.permitido && (
+                <div className="flex items-center gap-1.5">
+                  <Luggage className="w-4 h-4 text-blue-400" />
+                  <span>
+                    {equipajeDocumentado.piezas} {equipajeDocumentado.piezas === 1 ? 'maleta' : 'maletas'} ({equipajeDocumentado.peso}kg)
+                  </span>
+                </div>
+              )}
+              {equipajeDocumentado.permitido && equipajeDocumentado.precioExtra > 0 && (
+                <span className="text-[10px] text-gray-400">
+                  +${equipajeDocumentado.precioExtra} MXN/extra
+                </span>
+              )}
             </div>
           </div>
 
-{/* SECCIÓN DERECHA: PRECIO Y ACCIÓN */}
+          {/* SECCIÓN DERECHA: PRECIO Y ACCIÓN */}
           <div className="w-full md:w-64 bg-gray-50/80 p-6 flex flex-row md:flex-col items-center justify-between md:justify-center border-t md:border-t-0 md:border-l border-gray-100">
             
             <div className="text-left md:text-center">
               <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Total por persona</p>
               <div className="flex items-baseline md:justify-center gap-1">
-                 <span className="text-sm text-gray-400 font-medium align-top mt-1">$</span>
-                 <span className="text-4xl font-bold text-gray-900 tracking-tight">
-                   {flight.precio.toLocaleString()}
-                 </span>
+                <span className="text-sm text-gray-400 font-medium align-top mt-1">$</span>
+                <span className="text-4xl font-bold text-gray-900 tracking-tight">
+                  {flight.precio.toLocaleString()}
+                </span>
               </div>
               <p className="text-xs text-gray-400 mt-1 mb-0 md:mb-6">MXN (Impuestos incluidos)</p>
             </div>
 
-            {/* CAMBIO: Botón corregido */}
             <Button
               onClick={handleSelect}
               className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg shadow-blue-200 hover:shadow-blue-300 w-auto md:w-full rounded-xl py-6 px-6 font-bold text-base transition-all flex items-center justify-center gap-2 whitespace-nowrap"

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { Luggage, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
@@ -32,6 +32,19 @@ export interface Flight {
   horaLlegada: string;
   duracion: string;
   precio: number;
+  equipaje?: {
+    mano: {
+      permitido: boolean;
+      peso: number;
+      dimensiones: string;
+    };
+    documentado: {
+      permitido: boolean;
+      peso: number;
+      piezas: number;
+      precioExtra: number;
+    };
+  };
   capacidadTotal: number;
   asientosDisponibles: number;
   estado: string;
@@ -57,21 +70,23 @@ export interface FlightFormData {
   horaLlegada: string;
   duracion: string;
   precio: number;
+  equipaje: {
+    mano: {
+      permitido: boolean;
+      peso: number;
+      dimensiones: string;
+    };
+    documentado: {
+      permitido: boolean;
+      peso: number;
+      piezas: number;
+      precioExtra: number;
+    };
+  };
   capacidadTotal: number;
   estado: string;
   tipoVuelo: string;
 }
-
-const ciudadesMexicanas = [
-  { nombre: 'Ciudad de México', codigo: 'MEX', aeropuerto: 'Aeropuerto Internacional Benito Juárez' },
-  { nombre: 'Cancún', codigo: 'CUN', aeropuerto: 'Aeropuerto Internacional de Cancún' },
-  { nombre: 'Guadalajara', codigo: 'GDL', aeropuerto: 'Aeropuerto Internacional Miguel Hidalgo' },
-  { nombre: 'Monterrey', codigo: 'MTY', aeropuerto: 'Aeropuerto Internacional Mariano Escobedo' },
-  { nombre: 'Tijuana', codigo: 'TIJ', aeropuerto: 'Aeropuerto Internacional General Abelardo L. Rodríguez' },
-  { nombre: 'Los Cabos', codigo: 'SJD', aeropuerto: 'Aeropuerto Internacional de Los Cabos' },
-  { nombre: 'Puerto Vallarta', codigo: 'PVR', aeropuerto: 'Aeropuerto Internacional Lic. Gustavo Díaz Ordaz' },
-  { nombre: 'Mazatlán', codigo: 'MZT', aeropuerto: 'Aeropuerto Internacional General Rafael Buelna' },
-];
 
 export default function FlightModal({ isOpen, onClose, onSave, flight, mode }: FlightModalProps) {
   const [formData, setFormData] = useState<FlightFormData>({
@@ -85,6 +100,19 @@ export default function FlightModal({ isOpen, onClose, onSave, flight, mode }: F
     horaLlegada: '',
     duracion: '',
     precio: 0,
+    equipaje: {
+      mano: {
+        permitido: true,
+        peso: 10,
+        dimensiones: '55x40x20 cm'
+      },
+      documentado: {
+        permitido: true,
+        peso: 23,
+        piezas: 1,
+        precioExtra: 500
+      }
+    },
     capacidadTotal: 180,
     estado: 'programado',
     tipoVuelo: 'directo',
@@ -105,6 +133,10 @@ export default function FlightModal({ isOpen, onClose, onSave, flight, mode }: F
         horaLlegada: flight.horaLlegada,
         duracion: flight.duracion,
         precio: flight.precio,
+        equipaje: flight.equipaje || {
+          mano: { permitido: true, peso: 10, dimensiones: '55x40x20 cm' },
+          documentado: { permitido: true, peso: 23, piezas: 1, precioExtra: 500 }
+        },
         capacidadTotal: flight.capacidadTotal,
         estado: flight.estado,
         tipoVuelo: flight.tipoVuelo,
@@ -121,6 +153,10 @@ export default function FlightModal({ isOpen, onClose, onSave, flight, mode }: F
         horaLlegada: '',
         duracion: '',
         precio: 0,
+        equipaje: {
+          mano: { permitido: true, peso: 10, dimensiones: '55x40x20 cm' },
+          documentado: { permitido: true, peso: 23, piezas: 1, precioExtra: 500 }
+        },
         capacidadTotal: 180,
         estado: 'programado',
         tipoVuelo: 'directo',
@@ -128,32 +164,25 @@ export default function FlightModal({ isOpen, onClose, onSave, flight, mode }: F
     }
   }, [flight, mode, isOpen]);
 
-  // Función para calcular fecha y hora de llegada
   const calcularLlegada = (fechaSalida: string, horaSalida: string, duracion: string) => {
     if (!fechaSalida || !horaSalida || !duracion) return { fechaLlegada: '', horaLlegada: '' };
 
     try {
-      // Parsear la duración (formato: "5h 30m" o "2h" o "45m")
       const duracionMatch = duracion.match(/(\d+)h?\s*(\d+)?m?/i);
       if (!duracionMatch) return { fechaLlegada: '', horaLlegada: '' };
 
       const horas = parseInt(duracionMatch[1] || '0');
       const minutos = parseInt(duracionMatch[2] || '0');
 
-      // Crear fecha/hora de salida
       const [year, month, day] = fechaSalida.split('-').map(Number);
       const [hours, mins] = horaSalida.split(':').map(Number);
       
       const fechaHoraSalida = new Date(year, month - 1, day, hours, mins);
 
-      // Agregar la duración
       fechaHoraSalida.setHours(fechaHoraSalida.getHours() + horas);
       fechaHoraSalida.setMinutes(fechaHoraSalida.getMinutes() + minutos);
 
-      // Formatear fecha de llegada (YYYY-MM-DD)
       const fechaLlegada = fechaHoraSalida.toISOString().split('T')[0];
-
-      // Formatear hora de llegada (HH:MM)
       const horaLlegada = fechaHoraSalida.toTimeString().slice(0, 5);
 
       return { fechaLlegada, horaLlegada };
@@ -163,7 +192,6 @@ export default function FlightModal({ isOpen, onClose, onSave, flight, mode }: F
     }
   };
 
-  // Efecto para calcular automáticamente la llegada cuando cambian los datos
   useEffect(() => {
     if (formData.fechaSalida && formData.horaSalida && formData.duracion) {
       const { fechaLlegada, horaLlegada } = calcularLlegada(
@@ -182,39 +210,16 @@ export default function FlightModal({ isOpen, onClose, onSave, flight, mode }: F
     }
   }, [formData.fechaSalida, formData.horaSalida, formData.duracion]);
 
-  const handleOrigenChange = (codigo: string) => {
-    const ciudad = ciudadesMexicanas.find(c => c.codigo === codigo);
-    if (ciudad) {
-      setFormData({
-        ...formData,
-        origen: {
-          ciudad: ciudad.nombre,
-          codigo: ciudad.codigo,
-          aeropuerto: ciudad.aeropuerto,
-        },
-      });
-    }
-  };
-
-  const handleDestinoChange = (codigo: string) => {
-    const ciudad = ciudadesMexicanas.find(c => c.codigo === codigo);
-    if (ciudad) {
-      setFormData({
-        ...formData,
-        destino: {
-          ciudad: ciudad.nombre,
-          codigo: ciudad.codigo,
-          aeropuerto: ciudad.aeropuerto,
-        },
-      });
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.origen.codigo || !formData.destino.codigo) {
-      alert('Por favor selecciona origen y destino');
+      alert('Por favor completa todos los campos de origen y destino');
+      return;
+    }
+
+    if (formData.origen.codigo.length !== 3 || formData.destino.codigo.length !== 3) {
+      alert('Los códigos IATA deben tener exactamente 3 caracteres');
       return;
     }
 
@@ -232,8 +237,8 @@ export default function FlightModal({ isOpen, onClose, onSave, flight, mode }: F
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto m-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h2 className="text-2xl font-bold text-gray-900">
@@ -256,7 +261,7 @@ export default function FlightModal({ isOpen, onClose, onSave, flight, mode }: F
               <Input
                 id="numeroVuelo"
                 value={formData.numeroVuelo}
-                onChange={(e) => setFormData({ ...formData, numeroVuelo: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, numeroVuelo: e.target.value.toUpperCase() })}
                 placeholder="AL-2102"
                 required
               />
@@ -274,42 +279,103 @@ export default function FlightModal({ isOpen, onClose, onSave, flight, mode }: F
             </div>
           </div>
 
-          {/* Origen y Destino */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="origen">Origen *</Label>
-              <select
-                id="origen"
-                value={formData.origen.codigo}
-                onChange={(e) => handleOrigenChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-                required
-              >
-                <option value="">Seleccionar origen</option>
-                {ciudadesMexicanas.map(ciudad => (
-                  <option key={ciudad.codigo} value={ciudad.codigo}>
-                    {ciudad.nombre} ({ciudad.codigo})
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* ORIGEN - Inputs Manuales */}
+          <div className="border-t border-gray-200 pt-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">📍 Origen</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="origenCiudad">Ciudad de Origen *</Label>
+                <Input
+                  id="origenCiudad"
+                  value={formData.origen.ciudad}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    origen: { ...formData.origen, ciudad: e.target.value }
+                  })}
+                  placeholder="Ciudad de México"
+                  required
+                />
+              </div>
 
-            <div>
-              <Label htmlFor="destino">Destino *</Label>
-              <select
-                id="destino"
-                value={formData.destino.codigo}
-                onChange={(e) => handleDestinoChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-                required
-              >
-                <option value="">Seleccionar destino</option>
-                {ciudadesMexicanas.map(ciudad => (
-                  <option key={ciudad.codigo} value={ciudad.codigo}>
-                    {ciudad.nombre} ({ciudad.codigo})
-                  </option>
-                ))}
-              </select>
+              <div>
+                <Label htmlFor="origenCodigo">Código IATA * (3 letras)</Label>
+                <Input
+                  id="origenCodigo"
+                  value={formData.origen.codigo}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    origen: { ...formData.origen, codigo: e.target.value.toUpperCase() }
+                  })}
+                  placeholder="MEX"
+                  maxLength={3}
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">Ejemplo: MEX, CUN, GDL</p>
+              </div>
+
+              <div className="md:col-span-1">
+                <Label htmlFor="origenAeropuerto">Aeropuerto de Origen *</Label>
+                <Input
+                  id="origenAeropuerto"
+                  value={formData.origen.aeropuerto}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    origen: { ...formData.origen, aeropuerto: e.target.value }
+                  })}
+                  placeholder="Aeropuerto Internacional Benito Juárez"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* DESTINO - Inputs Manuales */}
+          <div className="border-t border-gray-200 pt-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">🎯 Destino</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="destinoCiudad">Ciudad de Destino *</Label>
+                <Input
+                  id="destinoCiudad"
+                  value={formData.destino.ciudad}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    destino: { ...formData.destino, ciudad: e.target.value }
+                  })}
+                  placeholder="Cancún"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="destinoCodigo">Código IATA * (3 letras)</Label>
+                <Input
+                  id="destinoCodigo"
+                  value={formData.destino.codigo}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    destino: { ...formData.destino, codigo: e.target.value.toUpperCase() }
+                  })}
+                  placeholder="CUN"
+                  maxLength={3}
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">Ejemplo: CUN, MTY, TIJ</p>
+              </div>
+
+              <div className="md:col-span-1">
+                <Label htmlFor="destinoAeropuerto">Aeropuerto de Destino *</Label>
+                <Input
+                  id="destinoAeropuerto"
+                  value={formData.destino.aeropuerto}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    destino: { ...formData.destino, aeropuerto: e.target.value }
+                  })}
+                  placeholder="Aeropuerto Internacional de Cancún"
+                  required
+                />
+              </div>
             </div>
           </div>
 
@@ -354,7 +420,7 @@ export default function FlightModal({ isOpen, onClose, onSave, flight, mode }: F
             </p>
           </div>
 
-          {/* Fechas y Horas de Llegada (calculadas automáticamente) */}
+          {/* Fechas y Horas de Llegada */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-blue-50 p-4 rounded-lg">
             <div>
               <Label htmlFor="fechaLlegada">Fecha de Llegada (calculada)</Label>
@@ -408,6 +474,154 @@ export default function FlightModal({ isOpen, onClose, onSave, flight, mode }: F
                 max="200"
                 required
               />
+            </div>
+          </div>
+
+          {/* EQUIPAJE */}
+          <div className="border-t border-gray-200 pt-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Luggage className="w-5 h-5 text-primary" />
+              <h3 className="text-lg font-semibold text-gray-900">Políticas de Equipaje</h3>
+            </div>
+
+            {/* Equipaje de Mano */}
+            <div className="bg-gray-50 p-4 rounded-lg mb-4">
+              <h4 className="font-medium text-gray-900 mb-3">Equipaje de Mano</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="manoPermitido">Permitido</Label>
+                  <select
+                    id="manoPermitido"
+                    value={formData.equipaje.mano.permitido ? 'si' : 'no'}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      equipaje: {
+                        ...formData.equipaje,
+                        mano: { ...formData.equipaje.mano, permitido: e.target.value === 'si' }
+                      }
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                  >
+                    <option value="si">Sí</option>
+                    <option value="no">No</option>
+                  </select>
+                </div>
+
+                <div>
+                  <Label htmlFor="manoPeso">Peso Máximo (kg)</Label>
+                  <Input
+                    id="manoPeso"
+                    type="number"
+                    value={formData.equipaje.mano.peso}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      equipaje: {
+                        ...formData.equipaje,
+                        mano: { ...formData.equipaje.mano, peso: parseFloat(e.target.value) }
+                      }
+                    })}
+                    min="0"
+                    max="25"
+                    step="0.5"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="manoDimensiones">Dimensiones</Label>
+                  <Input
+                    id="manoDimensiones"
+                    value={formData.equipaje.mano.dimensiones}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      equipaje: {
+                        ...formData.equipaje,
+                        mano: { ...formData.equipaje.mano, dimensiones: e.target.value }
+                      }
+                    })}
+                    placeholder="55x40x20 cm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Equipaje Documentado */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="font-medium text-gray-900 mb-3">Equipaje Documentado</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="docPermitido">Permitido</Label>
+                  <select
+                    id="docPermitido"
+                    value={formData.equipaje.documentado.permitido ? 'si' : 'no'}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      equipaje: {
+                        ...formData.equipaje,
+                        documentado: { ...formData.equipaje.documentado, permitido: e.target.value === 'si' }
+                      }
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                  >
+                    <option value="si">Sí</option>
+                    <option value="no">No</option>
+                  </select>
+                </div>
+
+                <div>
+                  <Label htmlFor="docPeso">Peso Máximo (kg)</Label>
+                  <Input
+                    id="docPeso"
+                    type="number"
+                    value={formData.equipaje.documentado.peso}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      equipaje: {
+                        ...formData.equipaje,
+                        documentado: { ...formData.equipaje.documentado, peso: parseFloat(e.target.value) }
+                      }
+                    })}
+                    min="0"
+                    max="32"
+                    step="0.5"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="docPiezas">Piezas Incluidas</Label>
+                  <Input
+                    id="docPiezas"
+                    type="number"
+                    value={formData.equipaje.documentado.piezas}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      equipaje: {
+                        ...formData.equipaje,
+                        documentado: { ...formData.equipaje.documentado, piezas: parseInt(e.target.value) }
+                      }
+                    })}
+                    min="0"
+                    max="5"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="docPrecio">Precio Extra por Pieza (MXN)</Label>
+                  <Input
+                    id="docPrecio"
+                    type="number"
+                    value={formData.equipaje.documentado.precioExtra}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      equipaje: {
+                        ...formData.equipaje,
+                        documentado: { ...formData.equipaje.documentado, precioExtra: parseFloat(e.target.value) }
+                      }
+                    })}
+                    min="0"
+                    step="50"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 

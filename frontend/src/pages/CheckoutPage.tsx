@@ -7,20 +7,33 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Alert, AlertDescription } from '@/components/ui/Alert';
-import { CreditCard, Calendar, Lock, Plane, MapPin, Clock, User, AlertCircle } from 'lucide-react';
+import { CreditCard, Calendar, Lock, Plane, MapPin, Clock, User, AlertCircle, Luggage } from 'lucide-react';
 
 interface Reserva {
   _id: string;
   vuelo: {
     numeroVuelo: string;
     aerolinea: string;
-    origen: { ciudad: string; codigo: string };
-    destino: { ciudad: string; codigo: string };
+    origen: { ciudad: string; codigo: string; aeropuerto: string };
+    destino: { ciudad: string; codigo: string; aeropuerto: string };
     fechaSalida: string;
     horaSalida: string;
     fechaLlegada: string;
     horaLlegada: string;
     precio: number;
+    equipaje?: {
+      mano: {
+        permitido: boolean;
+        peso: number;
+        dimensiones: string;
+      };
+      documentado: {
+        permitido: boolean;
+        peso: number;
+        piezas: number;
+        precioExtra: number;
+      };
+    };
   };
   asiento: {
     numero: string;
@@ -30,9 +43,23 @@ interface Reserva {
     nombre: string;
     apellido: string;
   };
+  equipaje: {
+    mano: {
+      incluido: boolean;
+      peso: number;
+      dimensiones: string;
+    };
+    documentado: {
+      incluido: boolean;
+      piezasIncluidas: number;
+      piezasAdicionales: number;
+      pesoMaximo: number;
+      costoAdicional: number;
+    };
+  };
   precioTotal: number;
   estado: string;
-  createdAt: string; 
+  createdAt: string;
 }
 
 export default function CheckoutPage() {
@@ -438,7 +465,16 @@ export default function CheckoutPage() {
                     {vuelo.origen.codigo} → {vuelo.destino.codigo}
                   </span>
                 </div>
-
+                  <div className="text-xs text-gray-500 mt-1 space-y-1">
+                    <div className="flex items-start gap-2">
+                      <span className="shrink-0">•</span>
+                      <span className="line-clamp-2">{vuelo.origen.aeropuerto}</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="shrink-0">•</span>
+                      <span className="line-clamp-2">{vuelo.destino.aeropuerto}</span>
+                    </div>
+                  </div>
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Calendar className="w-4 h-4" />
                   <span>{new Date(vuelo.fechaSalida).toLocaleDateString('es-MX', {
@@ -466,7 +502,31 @@ export default function CheckoutPage() {
                   </span>
                 </div>
               </div>
-
+              {/* Equipaje Incluido */}
+              {vuelo.equipaje && (
+                <div className="mb-6 pb-4 border-t border-gray-200 pt-4">
+                  <h4 className="font-semibold text-sm text-gray-900 mb-3 flex items-center gap-2">
+                    <Luggage className="w-4 h-4" />
+                    Equipaje Incluido
+                  </h4>
+                  <div className="space-y-2">
+                    {vuelo.equipaje.mano.permitido && (
+                      <div className="flex justify-between text-xs text-gray-600">
+                        <span>Equipaje de mano</span>
+                        <span className="font-medium">{vuelo.equipaje.mano.peso}kg x {reservas.length}</span>
+                      </div>
+                    )}
+                    {vuelo.equipaje.documentado.permitido && (
+                      <div className="flex justify-between text-xs text-gray-600">
+                        <span>Equipaje documentado</span>
+                        <span className="font-medium">
+                          {vuelo.equipaje.documentado.piezas} {vuelo.equipaje.documentado.piezas === 1 ? 'pieza' : 'piezas'} ({vuelo.equipaje.documentado.peso}kg) x {reservas.length}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               {/* Pasajeros (si son múltiples) */}
               {reservas.length > 1 && (
                 <div className="mb-6 pb-6 border-t border-gray-200 pt-4">

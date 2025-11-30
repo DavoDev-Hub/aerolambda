@@ -293,15 +293,18 @@ export const obtenerMisReservas = async (req: Request, res: Response): Promise<v
     }
 
     const reservas = await Booking.find(filtros)
-      .populate('vuelo', 'numeroVuelo origen destino fechaSalida horaSalida fechaLlegada horaLlegada estado')
+      .populate('vuelo', 'numeroVuelo origen destino fechaSalida horaSalida fechaLlegada horaLlegada estado equipaje')
       .populate('asiento', 'numero tipo')
       .sort({ createdAt: -1 });
+
+    // ✅ FILTRAR reservas con vuelos válidos (no eliminados)
+    const reservasValidas = reservas.filter(r => r.vuelo !== null);
 
     res.json({
       success: true,
       data: {
-        reservas,
-        total: reservas.length
+        reservas: reservasValidas,
+        total: reservasValidas.length
       }
     });
   } catch (error: any) {
@@ -484,3 +487,4 @@ export const obtenerTodasReservas = async (req: Request, res: Response): Promise
     });
   }
 };
+

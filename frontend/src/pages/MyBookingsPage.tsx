@@ -15,7 +15,8 @@ import {
   X,
   Eye,
   Clock,
-  Armchair
+  Armchair,
+  Luggage
 } from 'lucide-react';
 
 type ReservationStatus = 'pendiente' | 'confirmada' | 'cancelada' | 'completada';
@@ -27,16 +28,31 @@ interface Reservation {
   vuelo: {
     numeroVuelo: string;
     origen: {
+      aeropuerto: string | undefined;
       ciudad: string;
       codigo: string;
     };
     destino: {
+      aeropuerto: string | undefined;
       ciudad: string;
       codigo: string;
     };
     fechaSalida: string;
     horaSalida: string;
     precio: number;
+    equipaje?: {
+      mano: {
+        permitido: boolean;
+        peso: number;
+        dimensiones: string;
+      };
+      documentado: {
+        permitido: boolean;
+        peso: number;
+        piezas: number;
+        precioExtra: number;
+      };
+    };
   };
   asiento: {
     numero: string;
@@ -44,6 +60,20 @@ interface Reservation {
   pasajero: {
     nombre: string;
     apellido: string;
+  };
+  equipaje: {
+    mano: {
+      incluido: boolean;
+      peso: number;
+      dimensiones: string;
+    };
+    documentado: {
+      incluido: boolean;
+      piezasIncluidas: number;
+      piezasAdicionales: number;
+      pesoMaximo: number;
+      costoAdicional: number;
+    };
   };
   precioTotal: number;
   createdAt: string;
@@ -144,21 +174,27 @@ export default function MyBookingsPage() {
     }
   };
 
-  const filteredReservations = reservations.filter((reservation) => {
-    const now = new Date();
-    const flightDate = new Date(reservation.vuelo.fechaSalida);
-    
-    if (activeTab === 'proximos') {
-      return reservation.estado === 'confirmada' && flightDate >= now;
-    }
-    if (activeTab === 'pasados') {
-      return reservation.estado === 'completada' || (reservation.estado === 'confirmada' && flightDate < now);
-    }
-    if (activeTab === 'cancelados') {
-      return reservation.estado === 'cancelada';
-    }
+const filteredReservations = reservations.filter((reservation) => {
+  // ✅ VALIDAR que vuelo existe y tiene fechaSalida
+  if (!reservation.vuelo || !reservation.vuelo.fechaSalida) {
+    console.warn('Reserva con vuelo eliminado:', reservation._id);
     return false;
-  });
+  }
+
+  const now = new Date();
+  const flightDate = new Date(reservation.vuelo.fechaSalida);
+  
+  if (activeTab === 'proximos') {
+    return reservation.estado === 'confirmada' && flightDate >= now;
+  }
+  if (activeTab === 'pasados') {
+    return reservation.estado === 'completada' || (reservation.estado === 'confirmada' && flightDate < now);
+  }
+  if (activeTab === 'cancelados') {
+    return reservation.estado === 'cancelada';
+  }
+  return false;
+});
 
   // --- RENDERIZADO ---
 
@@ -274,11 +310,14 @@ export default function MyBookingsPage() {
                       </div>
 
                       <div className="flex items-center justify-between">
-                        <div className="text-left">
-                          <p className="text-xs text-gray-500 mb-1 font-medium uppercase tracking-wider">Origen</p>
-                          <h3 className="text-xl font-bold text-gray-900">{reservation.vuelo.origen.ciudad}</h3>
-                          <p className="text-sm text-primary font-semibold">{reservation.vuelo.origen.codigo}</p>
-                        </div>
+                      <div className="text-left">
+                        <p className="text-xs text-gray-500 mb-1 font-medium uppercase tracking-wider">Origen</p>
+                        <h3 className="text-xl font-bold text-gray-900">{reservation.vuelo.origen.ciudad}</h3>
+                        <p className="text-sm text-primary font-semibold">{reservation.vuelo.origen.codigo}</p>
+                        <p className="text-xs text-gray-400 line-clamp-1 mt-0.5" title={reservation.vuelo.origen.aeropuerto}>
+                          {reservation.vuelo.origen.aeropuerto}
+                        </p>
+                      </div>
 
                         {/* Visualización de Ruta con Avión */}
                         <div className="flex-1 px-6 flex flex-col items-center justify-center">
@@ -296,6 +335,9 @@ export default function MyBookingsPage() {
                           <p className="text-xs text-gray-500 mb-1 font-medium uppercase tracking-wider">Destino</p>
                           <h3 className="text-xl font-bold text-gray-900">{reservation.vuelo.destino.ciudad}</h3>
                           <p className="text-sm text-primary font-semibold">{reservation.vuelo.destino.codigo}</p>
+                          <p className="text-xs text-gray-400 line-clamp-1 mt-0.5" title={reservation.vuelo.destino.aeropuerto}>
+                            {reservation.vuelo.destino.aeropuerto}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -356,7 +398,25 @@ export default function MyBookingsPage() {
                           </div>
                         </div>
                       </div>
-
+                    {/* Equipaje */}
+                    {reservation.equipaje && (
+                      <div className="mt-4 pt-4 border-t border-gray-100">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Luggage className="w-4 h-4 text-gray-500" />
+                          <span className="text-xs font-medium text-gray-500">Equipaje Incluido</span>
+                        </div>
+                        <div className="flex gap-3 text-xs text-gray-600">
+                          {reservation.equipaje.mano.incluido && (
+                            <span>✓ Mano: {reservation.equipaje.mano.peso}kg</span>
+                          )}
+                          {reservation.equipaje.documentado.incluido && (
+                            <span>
+                              ✓ Documentado: {reservation.equipaje.documentado.piezasIncluidas + reservation.equipaje.documentado.piezasAdicionales} {(reservation.equipaje.documentado.piezasIncluidas + reservation.equipaje.documentado.piezasAdicionales) === 1 ? 'pieza' : 'piezas'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+)}
                       {/* Precio - Destacado */}
                       <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
                          <div className="flex items-center gap-2 text-gray-500">

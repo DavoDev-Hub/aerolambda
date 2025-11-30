@@ -6,18 +6,30 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
-import { ArrowRight, Check, ChevronLeft, Armchair, CreditCard } from 'lucide-react';
-
+import { ArrowRight, Check, ChevronLeft, Armchair, CreditCard, Luggage } from 'lucide-react';
 // --- Interfaces (Misma lógica) ---
 interface Flight {
   _id: string;
   numeroVuelo: string;
-  origen: { ciudad: string; codigo: string };
-  destino: { ciudad: string; codigo: string };
+  origen: { ciudad: string; codigo: string; aeropuerto: string };
+  destino: { ciudad: string; codigo: string; aeropuerto: string };
   fechaSalida: string;
   horaSalida: string;
   duracion: string;
   precio: number;
+  equipaje?: {
+    mano: {
+      permitido: boolean;
+      peso: number;
+      dimensiones: string;
+    };
+    documentado: {
+      permitido: boolean;
+      peso: number;
+      piezas: number;
+      precioExtra: number;
+    };
+  };
 }
 
 interface Seat {
@@ -416,7 +428,36 @@ export default function SeatSelection() {
                        </span>
                     </div>
                   </div>
-
+                  {/* Información de Equipaje */}
+                  {flight.equipaje && (
+                    <div className="border-t border-gray-200 pt-4">
+                      <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        <Luggage className="w-4 h-4" />
+                        Equipaje Incluido
+                      </h3>
+                      <div className="space-y-2 text-sm">
+                        {flight.equipaje.mano.permitido && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-600">✓ Equipaje de mano</span>
+                            <span className="font-medium text-gray-900">{flight.equipaje.mano.peso}kg</span>
+                          </div>
+                        )}
+                        {flight.equipaje.documentado.permitido && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-600">✓ Equipaje documentado</span>
+                            <span className="font-medium text-gray-900">
+                              {flight.equipaje.documentado.piezas} {flight.equipaje.documentado.piezas === 1 ? 'pieza' : 'piezas'} ({flight.equipaje.documentado.peso}kg)
+                            </span>
+                          </div>
+                        )}
+                        {flight.equipaje.documentado.permitido && flight.equipaje.documentado.precioExtra > 0 && (
+                          <p className="text-xs text-gray-500 mt-2">
+                            Piezas adicionales: ${flight.equipaje.documentado.precioExtra} MXN c/u
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 <Button 
                   className="w-full mt-6 h-12 text-lg shadow-lg hover:shadow-primary/25 transition-all flex items-center justify-center"
                   disabled={selectedSeats.length !== numPasajeros}

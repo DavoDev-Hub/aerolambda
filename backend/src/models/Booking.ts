@@ -10,6 +10,22 @@ interface IPasajero {
   numeroDocumento: string;
 }
 
+// Interface para equipaje en la reserva
+interface IEquipajeReserva {
+  mano: {
+    incluido: boolean;
+    peso: number;
+    dimensiones: string;
+  };
+  documentado: {
+    incluido: boolean;
+    piezasIncluidas: number;
+    piezasAdicionales: number;
+    pesoMaximo: number;
+    costoAdicional: number;
+  };
+}
+
 // Interface para el documento de Reserva
 export interface IBooking extends Document {
   codigoReserva: string;
@@ -17,6 +33,7 @@ export interface IBooking extends Document {
   vuelo: Types.ObjectId;
   asiento: Types.ObjectId;
   pasajero: IPasajero;
+  equipaje: IEquipajeReserva;
   precioTotal: number;
   estado: 'pendiente' | 'confirmada' | 'cancelada' | 'completada';
   metodoPago?: string;
@@ -82,6 +99,46 @@ const bookingSchema = new Schema<IBooking>(
         type: String,
         required: [true, 'El número de documento es requerido'],
         trim: true
+      }
+    },
+    equipaje: {
+      mano: {
+        incluido: {
+          type: Boolean,
+          default: true
+        },
+        peso: {
+          type: Number,
+          default: 10
+        },
+        dimensiones: {
+          type: String,
+          default: '55x40x20 cm'
+        }
+      },
+      documentado: {
+        incluido: {
+          type: Boolean,
+          default: true
+        },
+        piezasIncluidas: {
+          type: Number,
+          default: 1
+        },
+        piezasAdicionales: {
+          type: Number,
+          default: 0,
+          min: [0, 'Las piezas adicionales no pueden ser negativas']
+        },
+        pesoMaximo: {
+          type: Number,
+          default: 23
+        },
+        costoAdicional: {
+          type: Number,
+          default: 0,
+          min: [0, 'El costo adicional no puede ser negativo']
+        }
       }
     },
     precioTotal: {

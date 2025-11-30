@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { UserPlus, LogIn } from 'lucide-react';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { RegisterForm } from '@/components/auth/RegisterForm';
 import loginImage from '@/utils/login-image.png';
-import { Variants } from 'framer-motion';
 
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
@@ -15,25 +14,25 @@ export default function AuthPage() {
     setActiveTab(tab);
   };
 
-const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 20, scale: 0.98 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: {
-      duration: 0.4,
-      ease: [0.4, 0, 0.2, 1] // cubic-bezier equivalente a "easeOut"
+  // OPTIMIZACIÓN 1: Eliminamos 'scale' porque Chrome sufre al escalar elementos con blur
+  const cardVariants: Variants = {
+    hidden: { opacity: 0, y: 20 }, 
+    visible: { 
+      opacity: 1, 
+      y: 0, 
+      transition: { 
+        duration: 0.4, 
+        ease: "easeOut" 
+      }
     }
-  }
-};
+  };
 
-  // Variantes para deslizar el contenido de los formularios
+  // Variantes para deslizar el contenido
   const slideVariants = {
     enter: (direction: number) => ({
       x: direction > 0 ? 20 : -20,
       opacity: 0,
-      position: "absolute" as const // Importante para evitar saltos de layout
+      position: "absolute" as const
     }),
     center: {
       zIndex: 1,
@@ -59,29 +58,28 @@ const cardVariants: Variants = {
           alt="Fondo AeroLambda" 
           className="w-full h-full object-cover scale-105"
         />
-        {/* Capas de superposición para legibilidad */}
         <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
         <div className="absolute inset-0 bg-gradient-to-t from-blue-900/40 via-transparent to-black/40" />
       </div>
 
-      {/* 2. TARJETA CENTRAL (Glassmorphism) */}
+      {/* 2. TARJETA CENTRAL */}
       <motion.div 
-        className="relative z-10 w-full max-w-md mx-4"
+        // OPTIMIZACIÓN 2: 'will-change-transform' fuerza al navegador a usar la GPU
+        className="relative z-10 w-full max-w-md mx-4 will-change-transform"
         variants={cardVariants}
         initial="hidden"
         animate="visible"
       >
         {/* Header de la tarjeta */}
         <div className="text-center mb-8">
-            <motion.div 
-              initial={{ scale: 0, rotate: -180 }} 
-              animate={{ scale: 1, rotate: 0 }} 
-              transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.2 }}
-              className="inline-flex w-16 h-16 items-center justify-center bg-primary rounded-2xl shadow-lg shadow-blue-500/30 mb-4"
-            >
-              {/* Usamos texto con fuente monoespaciada o sans para que se vea técnico */}
-              <span className="text-4xl text-white font-bold leading-none pb-1">λ</span>
-            </motion.div>
+          <motion.div 
+            initial={{ scale: 0, rotate: -180 }} 
+            animate={{ scale: 1, rotate: 0 }} 
+            transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.2 }}
+            className="inline-flex w-16 h-16 items-center justify-center bg-primary rounded-2xl shadow-lg shadow-blue-500/30 mb-4"
+          >
+            <span className="text-4xl text-white font-bold leading-none pb-1">λ</span>
+          </motion.div>
           <h1 className="text-4xl font-bold text-white tracking-tight drop-shadow-lg">
             AeroLambda
           </h1>
@@ -91,9 +89,10 @@ const cardVariants: Variants = {
         </div>
 
         {/* Cuerpo de la tarjeta */}
-        <div className="bg-white/90 backdrop-blur-xl border border-white/50 shadow-2xl rounded-3xl overflow-hidden relative">
+        {/* OPTIMIZACIÓN 3: Reducimos blur a 'md' y aumentamos opacidad a '95' para aliviar a Chrome */}
+        <div className="bg-white/95 backdrop-blur-md border border-white/50 shadow-2xl rounded-3xl overflow-hidden relative">
           
-          {/* Pestañas de Navegación Personalizadas */}
+          {/* Pestañas de Navegación */}
           <div className="flex p-2 bg-gray-100/80 rounded-t-3xl border-b border-gray-200/50">
             <TabButton 
               isActive={activeTab === 'login'} 
@@ -109,7 +108,7 @@ const cardVariants: Variants = {
             />
           </div>
 
-          {/* Área de Formularios Animados */}
+          {/* Área de Formularios */}
           <div className="p-6 md:p-8 relative min-h-[420px]"> 
             <AnimatePresence initial={false} custom={direction} mode="popLayout">
               {activeTab === 'login' ? (
@@ -143,7 +142,7 @@ const cardVariants: Variants = {
           </div>
         </div>
         
-        {/* Footer Copyright */}
+        {/* Footer */}
         <p className="text-center text-white/60 text-xs mt-8 font-medium">
           © {new Date().getFullYear()} AeroLambda. Conectando destinos.
         </p>
@@ -152,7 +151,7 @@ const cardVariants: Variants = {
   );
 }
 
-// Subcomponente para los botones de las pestañas
+// Subcomponente de Pestañas (Sin cambios funcionales, solo estilo)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function TabButton({ label, isActive, onClick, icon }: any) {
   return (

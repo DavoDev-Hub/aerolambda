@@ -54,7 +54,6 @@ export const crearVueloSchema = z.object({
       .string()
       .regex(/^\d{1,2}h\s*\d{0,2}m?$|^\d{1,2}h$|^\d{1,2}m$/, 'Formato de duración inválido (ej: 2h 30m, 5h, 45m)')
       .transform(val => {
-        // Normalizar el formato para que siempre tenga "h" y "m" con espacio
         const match = val.match(/(\d+)h?\s*(\d+)?m?/i);
         if (!match) return val;
         const horas = match[1] || '0';
@@ -66,6 +65,41 @@ export const crearVueloSchema = z.object({
       .number()
       .positive('El precio debe ser mayor a 0')
       .max(100000, 'El precio es demasiado alto'),
+    
+    equipaje: z.object({
+      mano: z.object({
+        permitido: z.boolean().default(true),
+        peso: z.number().min(0, 'El peso no puede ser negativo').max(25, 'Peso máximo 25kg').default(10),
+        dimensiones: z.string().min(5, 'Las dimensiones son requeridas').default('55x40x20 cm')
+      }).optional().default({
+        permitido: true,
+        peso: 10,
+        dimensiones: '55x40x20 cm'
+      }),
+      documentado: z.object({
+        permitido: z.boolean().default(true),
+        peso: z.number().min(0, 'El peso no puede ser negativo').max(32, 'Peso máximo 32kg').default(23),
+        piezas: z.number().int().min(0, 'Las piezas no pueden ser negativas').max(5, 'Máximo 5 piezas').default(1),
+        precioExtra: z.number().min(0, 'El precio extra no puede ser negativo').max(5000, 'Precio extra muy alto').default(500)
+      }).optional().default({
+        permitido: true,
+        peso: 23,
+        piezas: 1,
+        precioExtra: 500
+      })
+    }).optional().default({
+      mano: {
+        permitido: true,
+        peso: 10,
+        dimensiones: '55x40x20 cm'
+      },
+      documentado: {
+        permitido: true,
+        peso: 23,
+        piezas: 1,
+        precioExtra: 500
+      }
+    }),
     
     capacidadTotal: z
       .number()
@@ -141,6 +175,20 @@ export const actualizarVueloSchema = z.object({
       .optional(),
     
     precio: z.number().positive().max(100000).optional(),
+    
+    equipaje: z.object({
+      mano: z.object({
+        permitido: z.boolean(),
+        peso: z.number().min(0).max(25),
+        dimensiones: z.string().min(5)
+      }).optional(),
+      documentado: z.object({
+        permitido: z.boolean(),
+        peso: z.number().min(0).max(32),
+        piezas: z.number().int().min(0).max(5),
+        precioExtra: z.number().min(0).max(5000)
+      }).optional()
+    }).optional(),
     
     capacidadTotal: z.number().int().min(1).max(300).optional(),
     

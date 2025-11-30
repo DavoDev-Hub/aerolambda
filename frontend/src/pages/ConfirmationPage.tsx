@@ -11,10 +11,10 @@ import {
   User,
   Calendar,
   Clock,
-  MapPin,
   AlertCircle,
   Download,
   Search,
+  Luggage,
 } from 'lucide-react';
 
 export default function ConfirmationPage() {
@@ -169,10 +169,12 @@ export default function ConfirmationPage() {
                 </div>
 
                 <div className="mt-8 flex items-center justify-between">
-                   <div>
-                      <p className="text-4xl font-bold">{vuelo.origen.codigo}</p>
-                      <p className="text-blue-100 text-sm mt-1">{vuelo.origen.ciudad}</p>
-                   </div>
+                  <div>
+                    <p className="text-4xl font-bold">{vuelo.origen.codigo}</p>
+                    <p className="text-blue-100 text-xs mt-1 line-clamp-2 max-w-[120px]">
+                      {vuelo.origen.aeropuerto}
+                    </p>
+                  </div>
                    
                    <div className="flex-1 px-4 flex flex-col items-center">
                       <div className="w-full flex items-center gap-2">
@@ -187,13 +189,34 @@ export default function ConfirmationPage() {
                       <p className="text-xs text-blue-100 mt-2">{vuelo.duracion}</p>
                    </div>
 
-                   <div className="text-right">
-                      <p className="text-4xl font-bold">{vuelo.destino.codigo}</p>
-                      <p className="text-blue-100 text-sm mt-1">{vuelo.destino.ciudad}</p>
-                   </div>
+                  <div className="text-right">
+                    <p className="text-4xl font-bold">{vuelo.destino.codigo}</p>
+                    <p className="text-blue-100 text-xs mt-1 line-clamp-2 max-w-[120px]">
+                      {vuelo.destino.aeropuerto}
+                    </p>
+                  </div>
                 </div>
               </div>
-
+                {/* Equipaje */}
+                {reservaData.equipaje && (
+                  <div className="col-span-2 border-t border-gray-100 pt-4 mt-4">
+                    <div className="flex items-center gap-2 text-gray-400 mb-2 text-xs uppercase font-bold tracking-wider">
+                      <Luggage className="w-3 h-3" /> Equipaje
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {reservaData.equipaje.mano.incluido && (
+                        <div className="text-gray-700">
+                          <span className="font-medium">Mano:</span> {reservaData.equipaje.mano.peso}kg
+                        </div>
+                      )}
+                      {reservaData.equipaje.documentado.incluido && (
+                        <div className="text-gray-700">
+                          <span className="font-medium">Documentado:</span> {reservaData.equipaje.documentado.piezasIncluidas + reservaData.equipaje.documentado.piezasAdicionales} piezas ({reservaData.equipaje.documentado.pesoMaximo}kg)
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               {/* Cuerpo del Ticket */}
               <div className="p-6 sm:p-8">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-8 gap-x-4">
@@ -222,15 +245,6 @@ export default function ConfirmationPage() {
                     </div>
                     <p className="font-bold text-gray-900 text-lg truncate">
                       {pasajero.nombre} {pasajero.apellido}
-                    </p>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center gap-2 text-gray-400 mb-1 text-xs uppercase font-bold tracking-wider">
-                      <MapPin className="w-3 h-3" /> Puerta
-                    </div>
-                    <p className="font-bold text-gray-900 text-lg">
-                       --
                     </p>
                   </div>
 
