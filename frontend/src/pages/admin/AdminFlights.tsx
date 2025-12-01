@@ -12,9 +12,11 @@ import {
   Calendar, 
   MapPin,
   Clock,
-  Users
+  Users,
+  Armchair
 } from 'lucide-react';
 import FlightModal, { Flight, FlightFormData } from '@/components/admin/FlightModal';
+import SeatMapModal from '@/components/admin/SeatMapModal';
 
 export default function AdminFlights() {
   const [flights, setFlights] = useState<Flight[]>([]);
@@ -26,6 +28,10 @@ export default function AdminFlights() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
+  
+  // Seat map modal state
+  const [isSeatMapOpen, setIsSeatMapOpen] = useState(false);
+  const [seatMapFlight, setSeatMapFlight] = useState<Flight | null>(null);
 
   useEffect(() => {
     fetchFlights();
@@ -61,6 +67,11 @@ export default function AdminFlights() {
     setIsModalOpen(true);
   };
 
+  const handleViewSeats = (flight: Flight) => {
+    setSeatMapFlight(flight);
+    setIsSeatMapOpen(true);
+  };
+
   const handleSaveFlight = async (flightData: FlightFormData) => {
     try {
       const token = localStorage.getItem('token');
@@ -90,7 +101,7 @@ export default function AdminFlights() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Estás seguro de eliminar este vuelo?')) return;
+    if (!confirm('¿Estás seguro de eliminar este vuelo? Todas las reservas asociadas serán canceladas.')) return;
 
     try {
       const token = localStorage.getItem('token');
@@ -100,30 +111,23 @@ export default function AdminFlights() {
       });
 
       const data = await response.json();
+      
       if (data.success) {
         fetchFlights();
+      } else {
+        alert(data.message || 'Error al eliminar');
       }
     } catch (error) {
-      console.error('Error deleting flight:', error);
+      console.error('Error:', error);
+      alert('Error al eliminar el vuelo');
     }
   };
 
-  const getStatusStyle = (estado: string) => {
-    switch (estado) {
-      case 'programado': return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'en_vuelo': return 'bg-emerald-100 text-emerald-700 border-emerald-200 animate-pulse';
-      case 'completado': return 'bg-slate-100 text-slate-700 border-slate-200';
-      case 'cancelado': return 'bg-rose-100 text-rose-700 border-rose-200';
-      case 'retrasado': return 'bg-amber-100 text-amber-700 border-amber-200';
-      default: return 'bg-gray-100 text-gray-700';
-    }
-  };
-
-  const filteredFlights = flights.filter(flight => {
-    const term = searchTerm.toLowerCase();
-    const matchesSearch = flight.numeroVuelo.toLowerCase().includes(term) ||
-                         flight.origen.ciudad.toLowerCase().includes(term) ||
-                         flight.destino.ciudad.toLowerCase().includes(term);
+  const filteredFlights = flights.filter((flight) => {
+    const matchesSearch = 
+      flight.numeroVuelo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      flight.origen.ciudad.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      flight.destino.ciudad.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesOrigen = !filters.origen || flight.origen.codigo === filters.origen;
     const matchesEstado = !filters.estado || flight.estado === filters.estado;
@@ -131,7 +135,16 @@ export default function AdminFlights() {
     return matchesSearch && matchesOrigen && matchesEstado;
   });
 
-  // Calculamos stats rápidos basados en los datos cargados
+  const getStatusStyle = (estado: string) => {
+    switch (estado) {
+      case 'programado': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'en_vuelo': return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'completado': return 'bg-slate-50 text-slate-600 border-slate-200';
+      case 'cancelado': return 'bg-red-50 text-red-700 border-red-200';
+      default: return 'bg-slate-50 text-slate-600 border-slate-200';
+    }
+  };
+
   const stats = {
     total: flights.length,
     programados: flights.filter(f => f.estado === 'programado').length,
@@ -140,9 +153,11 @@ export default function AdminFlights() {
   };
 
   if (loading) {
-    return (
-      <AdminLayout pageTitle="Vuelos">
-        <div className="flex items-center justify-center h-full text-slate-500">Cargando vuelos...</div>
+return (
+      <AdminLayout pageTitle="Gestión de Vuelos">
+        <div className="space-y-6">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
       </AdminLayout>
     );
   }
@@ -151,52 +166,68 @@ export default function AdminFlights() {
     <AdminLayout pageTitle="Gestión de Vuelos">
       <div className="space-y-6">
         
-        {/* TOP BAR: Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="p-4 flex items-center gap-4 border-l-4 border-l-blue-500 shadow-sm">
-                <div className="p-3 rounded-full bg-blue-50 text-blue-600">
-                    <Plane className="w-5 h-5" />
-                </div>
-                <div>
-                    <p className="text-sm text-slate-500 font-medium">Total Vuelos</p>
-                    <p className="text-2xl font-bold text-slate-800">{stats.total}</p>
-                </div>
-            </Card>
-            <Card className="p-4 flex items-center gap-4 border-l-4 border-l-emerald-500 shadow-sm">
-                <div className="p-3 rounded-full bg-emerald-50 text-emerald-600">
-                    <Calendar className="w-5 h-5" />
-                </div>
-                <div>
-                    <p className="text-sm text-slate-500 font-medium">Programados</p>
-                    <p className="text-2xl font-bold text-slate-800">{stats.programados}</p>
-                </div>
-            </Card>
-            <Card className="p-4 flex items-center gap-4 border-l-4 border-l-indigo-500 shadow-sm">
-                <div className="p-3 rounded-full bg-indigo-50 text-indigo-600">
-                    <Plane className="w-5 h-5 transform -rotate-45" />
-                </div>
-                <div>
-                    <p className="text-sm text-slate-500 font-medium">En Vuelo</p>
-                    <p className="text-2xl font-bold text-slate-800">{stats.enVuelo}</p>
-                </div>
-            </Card>
-            <Card className="p-4 flex items-center gap-4 border-l-4 border-l-slate-500 shadow-sm">
-                <div className="p-3 rounded-full bg-slate-50 text-slate-600">
-                    <Users className="w-5 h-5" />
-                </div>
-                <div>
-                    <p className="text-sm text-slate-500 font-medium">Completados</p>
-                    <p className="text-2xl font-bold text-slate-800">{stats.completados}</p>
-                </div>
-            </Card>
+        {/* Header con Stats */}
+        <div>
+          <h1 className="text-3xl font-bold text-slate-800 mb-2">Gestión de Vuelos</h1>
+          <p className="text-slate-500">Administra todos los vuelos disponibles</p>
         </div>
 
-        {/* TOOLBAR: Buscador y Botón */}
-        <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-            {/* Buscador y Filtros */}
-            <div className="flex flex-1 gap-3 w-full md:w-auto overflow-x-auto">
-                <div className="relative group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="bg-white p-5 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total Vuelos</p>
+                <h3 className="text-3xl font-bold text-slate-800 mt-1">{stats.total}</h3>
+              </div>
+              <div className="p-3 bg-blue-50 rounded-lg">
+                <Plane className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+          </Card>
+
+          <Card className="bg-white p-5 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Programados</p>
+                <h3 className="text-3xl font-bold text-emerald-600 mt-1">{stats.programados}</h3>
+              </div>
+              <div className="p-3 bg-emerald-50 rounded-lg">
+                <Calendar className="w-6 h-6 text-emerald-600" />
+              </div>
+            </div>
+          </Card>
+
+          <Card className="bg-white p-5 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">En Vuelo</p>
+                <h3 className="text-3xl font-bold text-blue-600 mt-1">{stats.enVuelo}</h3>
+              </div>
+              <div className="p-3 bg-blue-50 rounded-lg">
+                <Plane className="w-6 h-6 text-blue-600 transform rotate-45" />
+              </div>
+            </div>
+          </Card>
+
+          <Card className="bg-white p-5 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Completados</p>
+                <h3 className="text-3xl font-bold text-slate-600 mt-1">{stats.completados}</h3>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <Users className="w-6 h-6 text-slate-600" />
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Barra de Búsqueda y Filtros */}
+        <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
+            <div className="flex flex-col sm:flex-row gap-3 flex-1">
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                         type="text"
                         placeholder="Buscar por vuelo o ciudad..."
@@ -236,7 +267,6 @@ export default function AdminFlights() {
                 </div>
             </div>
 
-            {/* Acción Principal */}
             <Button 
                 onClick={handleCreateClick}
                 className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200 transition-all flex items-center gap-2 px-6 py-2.5 h-auto rounded-lg font-semibold"
@@ -258,7 +288,7 @@ export default function AdminFlights() {
                   <th className="text-left px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Ocupación</th>
                   <th className="text-left px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Estado</th>
                   <th className="text-left px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Precio</th>
-                  <th className="text-right px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Acciones</th>
+                  <th className="text-center px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -266,12 +296,12 @@ export default function AdminFlights() {
                     const occupation = Math.round(((flight.capacidadTotal - flight.asientosDisponibles) / flight.capacidadTotal) * 100);
                     
                     return (
-                    <tr key={flight._id} className="hover:bg-slate-50/80 transition-colors group">
+                    <tr key={flight._id} className="hover:bg-slate-50/80 transition-colors">
                         
                         {/* Vuelo */}
                         <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                                <div className="p-2 rounded bg-blue-50 text-blue-600 group-hover:bg-blue-100 transition-colors">
+                                <div className="p-2 rounded bg-blue-50 text-blue-600">
                                     <Plane className="w-4 h-4" />
                                 </div>
                                 <span className="font-bold text-slate-800">{flight.numeroVuelo}</span>
@@ -333,14 +363,23 @@ export default function AdminFlights() {
                             </span>
                         </td>
 
-                        {/* Acciones */}
-                        <td className="px-6 py-4 text-right">
-                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* Acciones - SIEMPRE VISIBLES Y CENTRADAS */}
+                        <td className="px-6 py-4">
+                            <div className="flex justify-center items-center gap-2">
+                                <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleViewSeats(flight)}
+                                    className="h-9 w-9 p-0 flex items-center justify-center border-slate-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                                    title="Ver asientos"
+                                >
+                                    <Armchair className="w-4 h-4" />
+                                </Button>
                                 <Button 
                                     size="sm" 
                                     variant="outline"
                                     onClick={() => handleEditClick(flight)}
-                                    className="h-8 w-8 p-0 border-slate-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 rounded-lg"
+                                    className="h-9 w-9 p-0 flex items-center justify-center border-slate-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
                                     title="Editar"
                                 >
                                     <Edit2 className="w-4 h-4" />
@@ -349,7 +388,7 @@ export default function AdminFlights() {
                                     size="sm"
                                     variant="outline"
                                     onClick={() => handleDelete(flight._id)}
-                                    className="h-8 w-8 p-0 border-slate-200 hover:border-red-300 hover:bg-red-50 hover:text-red-600 rounded-lg"
+                                    className="h-9 w-9 p-0 flex items-center justify-center border-slate-200 hover:border-red-300 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
                                     title="Eliminar"
                                 >
                                     <Trash2 className="w-4 h-4" />
@@ -361,17 +400,17 @@ export default function AdminFlights() {
                 })}
               </tbody>
             </table>
-          </div>
-          
-          {filteredFlights.length === 0 && (
-              <div className="p-12 text-center text-slate-500">
-                  No se encontraron vuelos que coincidan con los filtros.
+
+            {filteredFlights.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-slate-500">No se encontraron vuelos</p>
               </div>
-          )}
+            )}
+          </div>
         </Card>
       </div>
 
-      {/* Modal */}
+      {/* Modal de Crear/Editar */}
       <FlightModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -379,6 +418,18 @@ export default function AdminFlights() {
         flight={selectedFlight}
         mode={modalMode}
       />
+
+      {/* Modal de Mapa de Asientos */}
+      {seatMapFlight && (
+        <SeatMapModal
+          isOpen={isSeatMapOpen}
+          onClose={() => setIsSeatMapOpen(false)}
+          vueloId={seatMapFlight._id}
+          numeroVuelo={seatMapFlight.numeroVuelo}
+          origen={seatMapFlight.origen.codigo}
+          destino={seatMapFlight.destino.codigo}
+        />
+      )}
     </AdminLayout>
   );
 }
