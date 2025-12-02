@@ -1,4 +1,4 @@
-import { MapPin, Calendar, Users, Search } from 'lucide-react';
+import { MapPin, Calendar, Users, Search, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { motion } from 'framer-motion';
 
@@ -18,88 +18,92 @@ export default function SearchHeader({
   onModifySearch,
 }: SearchHeaderProps) {
   return (
-    // CAMBIO 1: Reduje pt-24 a pt-6. Como ya tenemos el espaciador del Header, no necesitamos tanto padding aquí.
-    <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-blue-800 py-8 px-4 shadow-lg relative overflow-hidden">
-      
-      {/* Decoración de fondo */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-900/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
-
-      <div className="max-w-7xl mx-auto relative z-10">
+    <div className="w-full px-4 py-6 relative z-10">
+      <div className="max-w-5xl mx-auto">
         
-        {/* Título */}
+        {/* Título de la sección */}
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 text-white"
+          className="mb-6 text-center md:text-left"
         >
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Resultados de búsqueda</h1>
-          <p className="text-blue-100 text-sm mt-1 opacity-90">Encontramos las mejores opciones para tu viaje</p>
+          <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
+            Resultados de tu búsqueda
+          </h1>
+          <p className="text-slate-400 mt-2 text-lg">
+            Encontramos las mejores opciones para tu próxima aventura
+          </p>
         </motion.div>
 
-        {/* Barra de Búsqueda */}
+        {/* Barra de Datos "Glass" */}
         <motion.div 
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1 }}
-          className="bg-white/10 backdrop-blur-md border border-white/20 text-white rounded-xl p-3 md:p-4 flex flex-col md:flex-row gap-4 items-center justify-between shadow-xl"
+          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 md:p-5 flex flex-col lg:flex-row gap-6 items-center justify-between shadow-2xl relative overflow-hidden"
         >
+          {/* Brillo superior decorativo */}
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+
           {/* Datos del vuelo */}
-          <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8 flex-1 w-full md:w-auto px-2">
+          <div className="flex flex-col md:flex-row items-center gap-6 md:gap-12 flex-1 w-full lg:w-auto justify-center lg:justify-start">
             
             {/* Ruta */}
-            <div className="flex items-center gap-3 w-full md:w-auto">
-              <div className="p-2 bg-white/20 rounded-lg shrink-0">
-                <MapPin className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-500/20 rounded-xl border border-blue-500/30 text-blue-400">
+                <MapPin className="w-6 h-6" />
               </div>
               <div className="flex flex-col">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-blue-100 opacity-80">Ruta</span>
-                <div className="flex items-center gap-2 font-bold text-base md:text-lg whitespace-nowrap">
+                <span className="text-[10px] uppercase tracking-widest font-bold text-slate-400 mb-1">Ruta</span>
+                <div className="flex items-center gap-3 font-bold text-xl text-white">
                   <span>{origin}</span>
-                  <span className="text-blue-200">→</span>
+                  <ArrowRight className="w-5 h-5 text-slate-500" />
                   <span>{destination}</span>
                 </div>
               </div>
             </div>
 
-            <div className="w-full h-px md:w-px md:h-10 bg-white/20 hidden md:block"></div>
+            {/* Separador Vertical (solo desktop) */}
+            <div className="hidden md:block w-px h-12 bg-white/10"></div>
 
             {/* Fecha */}
-            <div className="flex items-center gap-3 w-full md:w-auto">
-              <div className="p-2 bg-white/20 rounded-lg shrink-0">
-                <Calendar className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-purple-500/20 rounded-xl border border-purple-500/30 text-purple-400">
+                <Calendar className="w-6 h-6" />
               </div>
               <div className="flex flex-col">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-blue-100 opacity-80">Fecha</span>
-                <span className="font-semibold text-sm md:text-base capitalize">{date}</span>
+                <span className="text-[10px] uppercase tracking-widest font-bold text-slate-400 mb-1">Fecha</span>
+                <span className="font-bold text-lg text-white capitalize">{date}</span>
               </div>
             </div>
 
-            <div className="w-full h-px md:w-px md:h-10 bg-white/20 hidden md:block"></div>
+            {/* Separador Vertical (solo desktop) */}
+            <div className="hidden md:block w-px h-12 bg-white/10"></div>
 
             {/* Pasajeros */}
-            <div className="flex items-center gap-3 w-full md:w-auto">
-              <div className="p-2 bg-white/20 rounded-lg shrink-0">
-                <Users className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-emerald-500/20 rounded-xl border border-emerald-500/30 text-emerald-400">
+                <Users className="w-6 h-6" />
               </div>
               <div className="flex flex-col">
-                 <span className="text-[10px] uppercase tracking-wider font-bold text-blue-100 opacity-80">Viajeros</span>
-                 <span className="font-semibold text-sm md:text-base">{passengers} {passengers === 1 ? 'Persona' : 'Personas'}</span>
+                 <span className="text-[10px] uppercase tracking-widest font-bold text-slate-400 mb-1">Viajeros</span>
+                 <span className="font-bold text-lg text-white">{passengers} {passengers === 1 ? 'Persona' : 'Personas'}</span>
               </div>
             </div>
           </div>
 
-
+          {/* Botón Modificar */}
           <Button
             onClick={onModifySearch}
-            className="w-full md:w-auto 
-              bg-blue-600 text-white border-2 border-blue-400 
-              hover:bg-white hover:text-blue-700 hover:border-white
-              font-bold shadow-lg px-6 h-12 
-              flex items-center justify-center gap-2 z-20 transition-all"
+            className="w-full lg:w-auto 
+              bg-white text-slate-900 border-0 
+              hover:bg-blue-50 transition-all duration-300
+              font-bold shadow-lg shadow-white/5 
+              px-8 h-14 rounded-xl text-base
+              flex items-center justify-center gap-2 group"
           >
-            <Search className="w-4 h-4 stroke-[3]" />
-            <span>Modificar</span>
+            <Search className="w-5 h-5 text-slate-400 group-hover:text-blue-600 transition-colors" />
+            <span>Modificar Búsqueda</span>
           </Button>
         </motion.div>
       </div>
