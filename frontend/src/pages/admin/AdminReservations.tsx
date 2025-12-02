@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { 
-  Eye, 
+import {  
   Search, 
   Filter, 
   CheckCircle2, 
@@ -204,9 +202,7 @@ export default function AdminReservations() {
                   <th className="text-left px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Ruta</th>
                   <th className="text-left px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Asiento</th>
                   <th className="text-left px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Total</th>
-                  <th className="text-left px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Estado</th>
-                  <th className="text-right px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Acción</th>
-                </tr>
+                  <th className="text-left px-6 py-4 font-semibold text-xs text-slate-500 uppercase tracking-wider">Estado</th>                </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredReservations.map((reservation) => (
@@ -280,19 +276,6 @@ export default function AdminReservations() {
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border capitalize ${getStatusStyle(reservation.estado)}`}>
                         {reservation.estado}
                       </span>
-                    </td>
-
-                    {/* Acciones */}
-                    <td className="px-6 py-4 text-right">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        className="h-8 w-8 p-0 border-slate-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => alert(`Detalles de: ${reservation.codigoReserva}`)}
-                        title="Ver detalles"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
                     </td>
                   </tr>
                 ))}

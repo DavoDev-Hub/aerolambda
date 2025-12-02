@@ -12,10 +12,12 @@ import AdminReservations from './pages/admin/AdminReservations';
 import AdminReports from './pages/admin/AdminReports';
 import ProtectedRoute from './components/ProtectedRoute';
 import ProfilePage from './pages/ProfilePage';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   return (
     <BrowserRouter>
+          <Toaster position="top-right" />  {/* ← Agregar */}
       <Routes>
         {/* Rutas públicas */}
         <Route path="/" element={<LandingPage />} />

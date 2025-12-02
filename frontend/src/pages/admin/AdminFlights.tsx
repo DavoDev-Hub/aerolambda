@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Toaster } from 'react-hot-toast'; // ← AGREGADO
 import AdminLayout from '@/components/layout/AdminLayout';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -72,6 +73,7 @@ export default function AdminFlights() {
     setIsSeatMapOpen(true);
   };
 
+  // ✅ FUNCIÓN CORREGIDA - Sin alert() y sin cerrar modal en error
   const handleSaveFlight = async (flightData: FlightFormData) => {
     try {
       const token = localStorage.getItem('token');
@@ -89,14 +91,22 @@ export default function AdminFlights() {
 
       const data = await response.json();
       
-      if (data.success) {
-        fetchFlights();
-      } else {
-        alert(data.message || 'Error al guardar');
+      // ✅ Verificar respuesta del servidor
+      if (!response.ok || !data.success) {
+        // Re-lanzar error para que FlightModal lo maneje
+        throw new Error(data.message || 'Error al guardar el vuelo');
       }
-    } catch (error) {
+
+      // ✅ Actualizar lista solo si fue exitoso
+      await fetchFlights();
+      
+      // ⚠️ NO cerrar modal aquí - FlightModal lo hace automáticamente
+      
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
       console.error('Error:', error);
-      alert('Error al guardar el vuelo');
+      // ✅ Re-lanzar el error para que FlightModal lo maneje con toast
+      throw error;
     }
   };
 
@@ -153,7 +163,7 @@ export default function AdminFlights() {
   };
 
   if (loading) {
-return (
+    return (
       <AdminLayout pageTitle="Gestión de Vuelos">
         <div className="space-y-6">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -164,6 +174,9 @@ return (
 
   return (
     <AdminLayout pageTitle="Gestión de Vuelos">
+      {/* ✅ TOASTER AGREGADO AQUÍ */}
+      <Toaster position="top-right" />
+      
       <div className="space-y-6">
         
         {/* Header con Stats */}
@@ -180,7 +193,7 @@ return (
                 <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total Vuelos</p>
                 <h3 className="text-3xl font-bold text-slate-800 mt-1">{stats.total}</h3>
               </div>
-              <div className="p-3 bg-blue-50 rounded-lg">
+              <div className="p-3 bg-blue-50 rounded-xl">
                 <Plane className="w-6 h-6 text-blue-600" />
               </div>
             </div>
@@ -192,7 +205,7 @@ return (
                 <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Programados</p>
                 <h3 className="text-3xl font-bold text-emerald-600 mt-1">{stats.programados}</h3>
               </div>
-              <div className="p-3 bg-emerald-50 rounded-lg">
+              <div className="p-3 bg-emerald-50 rounded-xl">
                 <Calendar className="w-6 h-6 text-emerald-600" />
               </div>
             </div>
@@ -204,8 +217,8 @@ return (
                 <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">En Vuelo</p>
                 <h3 className="text-3xl font-bold text-blue-600 mt-1">{stats.enVuelo}</h3>
               </div>
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <Plane className="w-6 h-6 text-blue-600 transform rotate-45" />
+              <div className="p-3 bg-blue-50 rounded-xl">
+                <Plane className="w-6 h-6 text-blue-600 animate-pulse" />
               </div>
             </div>
           </Card>
@@ -216,27 +229,27 @@ return (
                 <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Completados</p>
                 <h3 className="text-3xl font-bold text-slate-600 mt-1">{stats.completados}</h3>
               </div>
-              <div className="p-3 bg-slate-50 rounded-lg">
+              <div className="p-3 bg-slate-50 rounded-xl">
                 <Users className="w-6 h-6 text-slate-600" />
               </div>
             </div>
           </Card>
         </div>
 
-        {/* Barra de Búsqueda y Filtros */}
-        <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
-            <div className="flex flex-col sm:flex-row gap-3 flex-1">
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                        type="text"
-                        placeholder="Buscar por vuelo o ciudad..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-9 pr-4 py-2.5 bg-slate-50 border-none rounded-lg text-sm w-64 focus:ring-2 focus:ring-blue-500 transition-all"
-                    />
-                </div>
-                
+        {/* Búsqueda y Filtros */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            <div className="relative flex-1 w-full sm:max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                    type="text"
+                    placeholder="Buscar vuelo, origen o destino..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border-none rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:ring-2 focus:ring-blue-500"
+                />
+            </div>
+
+            <div className="flex gap-3 w-full sm:w-auto">
                 <div className="relative">
                     <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <select
@@ -245,10 +258,9 @@ return (
                         className="pl-9 pr-8 py-2.5 bg-slate-50 border-none rounded-lg text-sm text-slate-600 focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none min-w-[140px]"
                     >
                         <option value="">Origen: Todos</option>
-                        <option value="MEX">CDMX (MEX)</option>
-                        <option value="CUN">Cancún (CUN)</option>
-                        <option value="GDL">Guadalajara</option>
-                        <option value="MTY">Monterrey</option>
+                        {Array.from(new Set(flights.map(f => f.origen.codigo))).map(codigo => (
+                            <option key={codigo} value={codigo}>{codigo}</option>
+                        ))}
                     </select>
                 </div>
 
@@ -363,7 +375,7 @@ return (
                             </span>
                         </td>
 
-                        {/* Acciones - SIEMPRE VISIBLES Y CENTRADAS */}
+                        {/* Acciones */}
                         <td className="px-6 py-4">
                             <div className="flex justify-center items-center gap-2">
                                 <Button 

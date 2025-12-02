@@ -16,18 +16,19 @@ import { autenticar, esAdmin } from '../middleware/auth.middleware';
 const router = Router();
 
 /**
+ * @route   GET /api/vuelos/rutas-disponibles
+ * @desc    Obtener rutas y fechas disponibles
+ * @access  Público
+ */
+router.get('/rutas-disponibles', obtenerRutasDisponibles);
+
+/**
  * @route   GET /api/vuelos/buscar
  * @desc    Buscar vuelos (público - para clientes)
  * @access  Público
  */
 router.get('/buscar', buscarVuelos);
 
-/**
- * @route   GET /api/vuelos/rutas-disponibles
- * @desc    Obtener rutas y fechas disponibles
- * @access  Público
- */
-router.get('/rutas-disponibles', obtenerRutasDisponibles);
 /**
  * @route   POST /api/vuelos
  * @desc    Crear un nuevo vuelo
@@ -41,6 +42,9 @@ router.post('/', autenticar, esAdmin, validate(crearVueloSchema), crearVuelo);
  * @access  Privado - Solo Admin
  */
 router.get('/', autenticar, esAdmin, obtenerVuelos);
+
+
+
 
 /**
  * @route   GET /api/vuelos/:id
