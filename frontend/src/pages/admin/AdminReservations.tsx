@@ -6,7 +6,6 @@ import {
   Eye, 
   Search, 
   Filter, 
-  Calendar, 
   CheckCircle2, 
   XCircle, 
   Clock, 
@@ -190,12 +189,7 @@ export default function AdminReservations() {
                     </select>
                 </div>
             </div>
-            
-            {/* Botón de exportar (visual) */}
-            <Button variant="outline" className="border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900">
-                <Calendar className="w-4 h-4 mr-2" />
-                Filtrar Fecha
-            </Button>
+
         </div>
 
         {/* TABLA DE RESERVAS */}

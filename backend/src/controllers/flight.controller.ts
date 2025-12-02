@@ -352,3 +352,71 @@ export const cambiarEstadoVuelo = async (req: Request, res: Response): Promise<v
     });
   }
 };
+
+
+// Obtener rutas disponibles con fechas (PÚBLICO)
+export const obtenerRutasDisponibles = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Obtener todos los vuelos programados y en vuelo
+    const vuelos = await Flight.find({
+      estado: { $in: ['programado', 'en_vuelo'] },
+      fechaSalida: { $gte: new Date() } // Solo vuelos futuros
+    })
+      .select('origen destino fechaSalida')
+      .sort({ fechaSalida: 1 });
+
+    // Agrupar por ruta (origen -> destino)
+    const rutasMap = new Map<string, {
+      origen: { codigo: string; ciudad: string; aeropuerto: string };
+      destino: { codigo: string; ciudad: string; aeropuerto: string };
+      fechasDisponibles: string[];
+    }>();
+
+    vuelos.forEach(vuelo => {
+      const rutaKey = `${vuelo.origen.codigo}-${vuelo.destino.codigo}`;
+      const fechaString = vuelo.fechaSalida.toISOString().split('T')[0];
+
+      if (rutasMap.has(rutaKey)) {
+        const ruta = rutasMap.get(rutaKey)!;
+        if (!ruta.fechasDisponibles.includes(fechaString)) {
+          ruta.fechasDisponibles.push(fechaString);
+        }
+      } else {
+        rutasMap.set(rutaKey, {
+          origen: {
+            codigo: vuelo.origen.codigo,
+            ciudad: vuelo.origen.ciudad,
+            aeropuerto: vuelo.origen.aeropuerto
+          },
+          destino: {
+            codigo: vuelo.destino.codigo,
+            ciudad: vuelo.destino.ciudad,
+            aeropuerto: vuelo.destino.aeropuerto
+          },
+          fechasDisponibles: [fechaString]
+        });
+      }
+    });
+
+    // Convertir Map a Array y ordenar fechas
+    const rutas = Array.from(rutasMap.values()).map(ruta => ({
+      ...ruta,
+      fechasDisponibles: ruta.fechasDisponibles.sort()
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        rutas,
+        totalRutas: rutas.length
+      }
+    });
+  } catch (error: any) {
+    console.error('Error al obtener rutas disponibles:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener rutas disponibles',
+      error: error.message
+    });
+  }
+};

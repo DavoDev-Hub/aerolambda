@@ -185,7 +185,7 @@ export const crearReserva = async (req: Request, res: Response): Promise<void> =
     });
   }
 };
-// Confirmar pago y completar reserva (PRIVADO - Cliente)
+
 export const confirmarPago = async (req: Request, res: Response): Promise<void> => {
   try {
     const { reservaId, metodoPago } = req.body;
@@ -280,7 +280,7 @@ export const confirmarPago = async (req: Request, res: Response): Promise<void> 
     });
   }
 };
-// Obtener historial de reservas del usuario (PRIVADO - Cliente)
+
 export const obtenerMisReservas = async (req: Request, res: Response): Promise<void> => {
   try {
     const usuarioId = req.usuario?.id;
@@ -297,7 +297,7 @@ export const obtenerMisReservas = async (req: Request, res: Response): Promise<v
       .populate('asiento', 'numero tipo')
       .sort({ createdAt: -1 });
 
-    // ✅ FILTRAR reservas con vuelos válidos (no eliminados)
+    // Filtrar reservas con vuelos válidos
     const reservasValidas = reservas.filter(r => r.vuelo !== null);
 
     res.json({
@@ -317,7 +317,6 @@ export const obtenerMisReservas = async (req: Request, res: Response): Promise<v
   }
 };
 
-// Obtener una reserva por ID (PRIVADO - Cliente)
 export const obtenerReservaPorId = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
@@ -358,7 +357,6 @@ export const obtenerReservaPorId = async (req: Request, res: Response): Promise<
   }
 };
 
-// Cancelar una reserva (PRIVADO - Cliente)
 export const cancelarReserva = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
@@ -439,7 +437,6 @@ export const cancelarReserva = async (req: Request, res: Response): Promise<void
   }
 };
 
-// Obtener todas las reservas (ADMIN)
 export const obtenerTodasReservas = async (req: Request, res: Response): Promise<void> => {
   try {
     const { vueloId, estado, page = 1, limit = 20 } = req.query;
@@ -488,3 +485,128 @@ export const obtenerTodasReservas = async (req: Request, res: Response): Promise
   }
 };
 
+// 🆕 Obtener reportes con filtros de fecha (ADMIN)
+export const obtenerReportes = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { fechaInicio, fechaFin, vueloId, origen, destino, estado } = req.query;
+
+    // Construir filtros
+    const filtros: any = {};
+
+    // Filtro de fechas (usando createdAt de la reserva)
+    if (fechaInicio || fechaFin) {
+      filtros.createdAt = {};
+      if (fechaInicio) {
+        filtros.createdAt.$gte = new Date(fechaInicio as string);
+      }
+      if (fechaFin) {
+        const fechaFinDate = new Date(fechaFin as string);
+        fechaFinDate.setHours(23, 59, 59, 999); // Incluir todo el día
+        filtros.createdAt.$lte = fechaFinDate;
+      }
+    }
+
+    if (vueloId) {
+      filtros.vuelo = vueloId;
+    }
+
+    if (estado) {
+      filtros.estado = estado;
+    }
+
+    // Obtener todas las reservas con populate
+    const reservas = await Booking.find(filtros)
+      .populate({
+        path: 'vuelo',
+        select: 'numeroVuelo origen destino fechaSalida precio'
+      })
+      .populate('usuario', 'nombre apellido email')
+      .populate('asiento', 'numero tipo')
+      .sort({ createdAt: -1 });
+
+    // Filtrar por origen/destino si se proporcionan (después del populate)
+    let reservasFiltradas = reservas.filter(r => r.vuelo !== null);
+
+    if (origen) {
+      reservasFiltradas = reservasFiltradas.filter(r => 
+        (r.vuelo as any)?.origen?.codigo === origen
+      );
+    }
+
+    if (destino) {
+      reservasFiltradas = reservasFiltradas.filter(r => 
+        (r.vuelo as any)?.destino?.codigo === destino
+      );
+    }
+
+    // Calcular estadísticas
+    const totalReservas = reservasFiltradas.length;
+    const reservasConfirmadas = reservasFiltradas.filter(r => r.estado === 'confirmada').length;
+    const reservasCanceladas = reservasFiltradas.filter(r => r.estado === 'cancelada').length;
+    const reservasPendientes = reservasFiltradas.filter(r => r.estado === 'pendiente').length;
+
+    const ingresosTotal = reservasFiltradas
+      .filter(r => r.estado === 'confirmada')
+      .reduce((sum, r) => sum + r.precioTotal, 0);
+
+    const tasaCancelacion = totalReservas > 0 
+      ? ((reservasCanceladas / totalReservas) * 100) 
+      : 0;
+
+    // Agrupar por día (reservas por fecha)
+    const reservasPorDia: { [key: string]: number } = {};
+    reservasFiltradas.forEach(r => {
+      const fecha = new Date(r.createdAt).toISOString().split('T')[0];
+      reservasPorDia[fecha] = (reservasPorDia[fecha] || 0) + 1;
+    });
+
+    // Agrupar por vuelo (ingresos por vuelo)
+    const ingresosPorVuelo: { [key: string]: { vuelo: string; ingresos: number; reservas: number } } = {};
+    reservasFiltradas
+      .filter(r => r.estado === 'confirmada')
+      .forEach(r => {
+        const vueloNum = (r.vuelo as any)?.numeroVuelo || 'Desconocido';
+        if (!ingresosPorVuelo[vueloNum]) {
+          ingresosPorVuelo[vueloNum] = { vuelo: vueloNum, ingresos: 0, reservas: 0 };
+        }
+        ingresosPorVuelo[vueloNum].ingresos += r.precioTotal;
+        ingresosPorVuelo[vueloNum].reservas += 1;
+      });
+
+    // Distribución por estado
+    const distribucionEstados = {
+      confirmadas: reservasConfirmadas,
+      canceladas: reservasCanceladas,
+      pendientes: reservasPendientes
+    };
+
+    res.json({
+      success: true,
+      data: {
+        resumen: {
+          totalReservas,
+          reservasConfirmadas,
+          reservasCanceladas,
+          reservasPendientes,
+          ingresosTotal,
+          tasaCancelacion,
+          pasajerosTransportados: reservasConfirmadas
+        },
+        reservasPorDia: Object.entries(reservasPorDia).map(([fecha, cantidad]) => ({
+          fecha,
+          cantidad
+        })).sort((a, b) => a.fecha.localeCompare(b.fecha)),
+        ingresosPorVuelo: Object.values(ingresosPorVuelo).sort((a, b) => b.ingresos - a.ingresos),
+        distribucionEstados,
+        reservas: reservasFiltradas
+      }
+    });
+  } catch (error: any) {
+    console.error('Error al obtener reportes:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener reportes',
+      error: error.message
+    });
+  }
+};

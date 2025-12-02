@@ -6,7 +6,8 @@ import {
   actualizarVuelo,
   eliminarVuelo,
   buscarVuelos,
-  cambiarEstadoVuelo
+  cambiarEstadoVuelo,
+  obtenerRutasDisponibles
 } from '../controllers/flight.controller';
 import { validate } from '../middleware/validate';
 import { crearVueloSchema, actualizarVueloSchema } from '../validators/flight.validator';
@@ -21,6 +22,12 @@ const router = Router();
  */
 router.get('/buscar', buscarVuelos);
 
+/**
+ * @route   GET /api/vuelos/rutas-disponibles
+ * @desc    Obtener rutas y fechas disponibles
+ * @access  Público
+ */
+router.get('/rutas-disponibles', obtenerRutasDisponibles);
 /**
  * @route   POST /api/vuelos
  * @desc    Crear un nuevo vuelo
@@ -62,5 +69,6 @@ router.delete('/:id', autenticar, esAdmin, eliminarVuelo);
  * @access  Privado - Solo Admin
  */
 router.patch('/:id/estado', autenticar, esAdmin, cambiarEstadoVuelo);
+
 
 export default router;

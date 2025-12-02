@@ -1,0 +1,140 @@
+/* Estilos personalizados para react-datepicker */
+
+.custom-datepicker {
+  font-family: inherit;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.custom-datepicker .react-datepicker__header {
+  background-color: #2563eb;
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+  padding-top: 12px;
+}
+
+.custom-datepicker .react-datepicker__current-month {
+  color: white;
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 8px;
+}
+
+.custom-datepicker .react-datepicker__day-name {
+  color: white;
+  font-weight: 500;
+  width: 2.5rem;
+  line-height: 2.5rem;
+}
+
+.custom-datepicker .react-datepicker__day {
+  width: 2.5rem;
+  line-height: 2.5rem;
+  border-radius: 8px;
+  margin: 2px;
+  transition: all 0.2s;
+}
+
+.custom-datepicker .react-datepicker__day:hover {
+  background-color: #dbeafe;
+  border-radius: 8px;
+}
+
+.custom-datepicker .react-datepicker__day--selected {
+  background-color: #2563eb !important;
+  color: white !important;
+  font-weight: 600;
+}
+
+.custom-datepicker .react-datepicker__day--keyboard-selected {
+  background-color: #93c5fd;
+  color: #1e40af;
+}
+
+.custom-datepicker .react-datepicker__day--today {
+  font-weight: 600;
+  color: #2563eb;
+  border: 2px solid #2563eb;
+}
+
+/* Fechas disponibles (con vuelos) */
+.custom-datepicker .available-date {
+  background-color: #dcfce7 !important;
+  color: #166534 !important;
+  font-weight: 600;
+  position: relative;
+}
+
+.custom-datepicker .available-date:hover {
+  background-color: #bbf7d0 !important;
+  transform: scale(1.1);
+}
+
+.custom-datepicker .available-date::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  background-color: #16a34a;
+  border-radius: 50%;
+}
+
+/* Fechas NO disponibles (sin vuelos) */
+.custom-datepicker .unavailable-date {
+  background-color: #f3f4f6 !important;
+  color: #9ca3af !important;
+  cursor: not-allowed !important;
+  text-decoration: line-through;
+}
+
+.custom-datepicker .unavailable-date:hover {
+  background-color: #f3f4f6 !important;
+  transform: none !important;
+}
+
+.custom-datepicker .react-datepicker__day--disabled {
+  color: #d1d5db !important;
+  cursor: not-allowed;
+}
+
+.custom-datepicker .react-datepicker__navigation {
+  top: 12px;
+}
+
+.custom-datepicker .react-datepicker__navigation-icon::before {
+  border-color: white;
+}
+
+.custom-datepicker .react-datepicker__navigation:hover *::before {
+  border-color: #dbeafe;
+}
+
+/* Fecha seleccionada con vuelo disponible */
+.custom-datepicker .react-datepicker__day--selected.available-date {
+  background-color: #2563eb !important;
+  color: white !important;
+}
+
+.custom-datepicker .react-datepicker__day--selected.available-date::after {
+  background-color: white;
+}
+
+/* Animación para el calendario */
+.custom-datepicker .react-datepicker__month-container {
+  animation: fadeIn 0.2s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

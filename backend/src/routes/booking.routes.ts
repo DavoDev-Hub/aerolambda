@@ -5,7 +5,8 @@ import {
   obtenerMisReservas,
   obtenerReservaPorId,
   cancelarReserva,
-  obtenerTodasReservas
+  obtenerTodasReservas,
+  obtenerReportes
 } from '../controllers/booking.controller';
 import { validate } from '../middleware/validate';
 import { crearReservaSchema, confirmarPagoSchema } from '../validators/booking.validator';
@@ -33,6 +34,13 @@ router.post('/confirmar-pago', autenticar, validate(confirmarPagoSchema), confir
  * @access  Privado - Cliente
  */
 router.get('/mis-reservas', autenticar, obtenerMisReservas);
+
+/**
+ * @route   GET /api/reservas/reportes
+ * @desc    Obtener reportes con filtros de fecha
+ * @access  Privado - Admin
+ */
+router.get('/reportes', autenticar, esAdmin, obtenerReportes);
 
 /**
  * @route   GET /api/reservas/todas
