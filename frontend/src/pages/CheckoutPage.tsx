@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/flight/Header';
 import { Card } from '@/components/ui/Card';
@@ -71,7 +71,7 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reservas, setReservas] = useState<Reserva[]>([]);
-  const [tiempoRestante, setTiempoRestante] = useState<number>(0); // 🆕 Tiempo restante en segundos
+  const [tiempoRestante, setTiempoRestante] = useState<number>(0);
 
   const [paymentData, setPaymentData] = useState({
     cardNumber: '',
@@ -81,12 +81,17 @@ export default function CheckoutPage() {
     acceptTerms: false,
   });
 
-  // IDs de todas las reservas (puede venir del location.state o ser solo una)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const reservaIds = location.state?.reservaIds || [reservaId];
-  const precioTotalState = location.state?.precioTotal;
+  // ✅ FIX: Usar useMemo para estabilizar reservaIds y evitar recálculos
+  const reservaIds = useMemo(() => {
+    return location.state?.reservaIds || [reservaId];
+  }, [location.state?.reservaIds, reservaId]);
 
-  // 🆕 Función para calcular tiempo restante
+  // ✅ FIX: Extraer amount del location.state correctamente
+  const precioTotalState = useMemo(() => {
+    return location.state?.amount || location.state?.precioTotal;
+  }, [location.state?.amount, location.state?.precioTotal]);
+
+  // Función para calcular tiempo restante
   const calcularTiempoRestante = (createdAt: string): number => {
     const ahora = new Date().getTime();
     const creacion = new Date(createdAt).getTime();
@@ -98,17 +103,20 @@ export default function CheckoutPage() {
     return Math.floor(restante / 1000); // segundos
   };
 
-  // 🆕 Formatear tiempo en MM:SS
+  // Formatear tiempo en MM:SS
   const formatearTiempo = (segundos: number): string => {
     const minutos = Math.floor(segundos / 60);
     const segs = segundos % 60;
     return `${minutos}:${segs.toString().padStart(2, '0')}`;
   };
 
+  // ✅ FIX: Cargar reservas solo UNA VEZ
   useEffect(() => {
     const fetchReservas = async () => {
       try {
         setLoading(true);
+        setError(null);
+        
         const token = localStorage.getItem('token');
 
         if (!token) {
@@ -116,11 +124,18 @@ export default function CheckoutPage() {
           return;
         }
 
+        console.log('📥 Cargando reservas:', reservaIds);
+
         // Cargar todas las reservas
         const reservasPromises = reservaIds.map((id: string) =>
           fetch(`/api/reservas/${id}`, {
             headers: { Authorization: `Bearer ${token}` },
-          }).then(res => res.json())
+          }).then(res => {
+            if (!res.ok) {
+              throw new Error(`Error ${res.status}: ${res.statusText}`);
+            }
+            return res.json();
+          })
         );
 
         const reservasData = await Promise.all(reservasPromises);
@@ -133,7 +148,9 @@ export default function CheckoutPage() {
           throw new Error('No se encontraron las reservas');
         }
 
-        // 🆕 Verificar si alguna reserva está en estado pendiente
+        console.log('✅ Reservas cargadas:', reservasValidas);
+
+        // Verificar si alguna reserva está en estado pendiente
         const reservasPendientes = reservasValidas.filter(r => r.estado === 'pendiente');
         
         if (reservasPendientes.length > 0) {
@@ -144,7 +161,7 @@ export default function CheckoutPage() {
             // Reserva expirada
             setError('Esta reserva ha expirado. El tiempo límite de 15 minutos para completar el pago ha vencido. Por favor, realiza una nueva búsqueda.');
             
-            // Opcional: Cancelar automáticamente la reserva
+            // Cancelar automáticamente la reserva
             try {
               await fetch(`/api/reservas/${reservasPendientes[0]._id}`, {
                 method: 'DELETE',
@@ -154,6 +171,7 @@ export default function CheckoutPage() {
               console.error('Error al cancelar reserva expirada:', err);
             }
             
+            setLoading(false);
             return;
           }
           
@@ -163,19 +181,25 @@ export default function CheckoutPage() {
         setReservas(reservasValidas);
       } catch (err) {
         const error = err as Error;
-        console.error('Error fetching bookings:', error);
+        console.error('❌ Error fetching bookings:', error);
         setError(error.message);
       } finally {
         setLoading(false);
       }
     };
 
-    if (reservaIds && reservaIds.length > 0) {
+    // ✅ Solo ejecutar si tenemos reservaIds válidos
+    if (reservaIds && reservaIds.length > 0 && reservaIds[0]) {
       fetchReservas();
+    } else {
+      setError('No se especificó ID de reserva');
+      setLoading(false);
     }
+    
+    // ✅ FIX: Dependencias estables gracias a useMemo
   }, [reservaIds, navigate]);
 
-  // 🆕 Actualizar contador cada segundo
+  // ✅ Actualizar contador cada segundo (sin cambios, este está bien)
   useEffect(() => {
     if (tiempoRestante <= 0 || reservas.length === 0) return;
 
@@ -192,29 +216,30 @@ export default function CheckoutPage() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [tiempoRestante, reservas]);
+  }, [tiempoRestante, reservas.length]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 🆕 Verificar si el tiempo expiró antes de enviar
+    // Verificar si el tiempo expiró antes de enviar
     if (tiempoRestante <= 0) {
       alert('El tiempo para completar el pago ha expirado. Por favor, realiza una nueva búsqueda.');
       navigate('/');
       return;
     }
 
-    if (!paymentData.acceptTerms) {
-      alert('Debes aceptar los términos y condiciones');
-      return;
-    }
+    setSubmitting(true);
 
     try {
-      setSubmitting(true);
       const token = localStorage.getItem('token');
 
-      // Confirmar pago para todas las reservas
-      const confirmPromises = reservaIds.map((id: string) =>
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      // Confirmar pago para cada reserva
+      const confirmacionesPromises = reservas.map((reserva) =>
         fetch('/api/reservas/confirmar-pago', {
           method: 'POST',
           headers: {
@@ -222,29 +247,36 @@ export default function CheckoutPage() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            reservaId: id,
-            metodoPago: 'Tarjeta de crédito (Simulado)',
+            reservaId: reserva._id,
+            metodoPago: `Tarjeta terminada en ${paymentData.cardNumber.slice(-4)}`,
           }),
         }).then(res => res.json())
       );
 
-      const results = await Promise.all(confirmPromises);
+      const confirmaciones = await Promise.all(confirmacionesPromises);
 
-      const allSuccess = results.every(result => result.success);
+      // Verificar que todas las confirmaciones fueron exitosas
+      const todasExitosas = confirmaciones.every(c => c.success);
 
-      if (allSuccess) {
-        // Navegar a confirmación
-        navigate(`/reservas/${reservaIds[0]}/confirmacion`, {
-          state: { reservaIds }
-        });
-      } else {
-        const failedResults = results.filter(r => !r.success);
-        throw new Error(failedResults[0]?.message || 'Error al confirmar algunas reservas');
+      if (!todasExitosas) {
+        throw new Error('Error al confirmar una o más reservas');
       }
+
+      // Navegar a confirmación con la primera reserva
+      navigate(`/reservas/${reservas[0]._id}/confirmacion`, {
+        state: {
+          codigoReserva: confirmaciones[0].data?.codigoReserva || reservas[0]._id,
+          vuelo: reservas[0].vuelo,
+          pasajero: reservas[0].pasajero,
+          asiento: reservas[0].asiento,
+          precioTotal: total,
+          totalReservas: reservas.length
+        }
+      });
     } catch (err) {
       const error = err as Error;
       console.error('Error confirming payment:', error);
-      alert(`Error: ${error.message}`);
+      alert('Error al procesar el pago. Por favor, intenta de nuevo.');
     } finally {
       setSubmitting(false);
     }
@@ -254,27 +286,29 @@ export default function CheckoutPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600">Cargando información...</p>
+        <div className="max-w-7xl mx-auto px-4 py-12">
+          <div className="flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-gray-600">Cargando información del pago...</p>
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
-  if (error || reservas.length === 0) {
+  if (error) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center max-w-md">
-            <AlertCircle className="w-16 h-16 text-red-600 mx-auto mb-4" />
-            <p className="text-red-600 mb-4 text-lg font-semibold">
-              {error || 'No se pudieron cargar las reservas'}
-            </p>
-            <Button onClick={() => navigate('/')} className="mt-4">
+        <div className="max-w-7xl mx-auto px-4 py-12">
+          <Alert className="border-red-200 bg-red-50">
+            <AlertCircle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">{error}</AlertDescription>
+          </Alert>
+          <div className="mt-6 text-center">
+            <Button onClick={() => navigate('/')}>
               Buscar nuevos vuelos
             </Button>
           </div>
@@ -283,51 +317,54 @@ export default function CheckoutPage() {
     );
   }
 
-  const primeraReserva = reservas[0];
-  const vuelo = primeraReserva.vuelo;
-  const precioBase = precioTotalState || reservas.reduce((sum, r) => sum + r.precioTotal, 0);
-  const impuestos = Math.round(precioBase * 0.16); // 16% de impuestos
+  if (reservas.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <div className="max-w-7xl mx-auto px-4 py-12">
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>No se encontraron reservas</AlertDescription>
+          </Alert>
+        </div>
+      </div>
+    );
+  }
+
+  const vuelo = reservas[0].vuelo;
+  const precioBase = precioTotalState || reservas.reduce((acc, r) => acc + r.precioTotal, 0);
+  const impuestos = Math.round(precioBase * 0.16);
   const total = precioBase + impuestos;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary via-blue-700 to-blue-900">
+    <div className="min-h-screen bg-gray-50">
       <Header />
 
-
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* 🆕 Alert de tiempo restante */}
-        {tiempoRestante > 0 && (
-          <Alert className={`mb-6 ${tiempoRestante < 120 ? 'border-red-200 bg-red-50' : 'border-yellow-200 bg-yellow-50'}`}>
-            <div className="flex items-start gap-2">
-              <Clock className={`h-5 w-5 mt-0.5 ${tiempoRestante < 120 ? 'text-red-600' : 'text-yellow-600'}`} />
-              <AlertDescription className={tiempoRestante < 120 ? 'text-red-900' : 'text-yellow-900'}>
-                <p className="font-semibold mb-1">
-                  {tiempoRestante < 120 ? '⚠️ ¡Tiempo por agotarse!' : 'Completa tu compra'}
-                </p>
-                <p className="text-sm">
-                  Tu reserva expirará en: <span className="font-bold text-lg">{formatearTiempo(tiempoRestante)}</span>
-                </p>
-                <p className="text-xs mt-1">
-                  Los asientos serán liberados automáticamente si no completas el pago a tiempo.
-                </p>
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Completa tu compra</h1>
+          <p className="text-gray-600">
+            Ingresa los datos de tu tarjeta para finalizar la reserva
+          </p>
+          
+          {/* ⏰ Temporizador */}
+          {tiempoRestante > 0 && (
+            <Alert className="mt-4 bg-yellow-50 border-yellow-200">
+              <Clock className="h-4 w-4 text-yellow-600" />
+              <AlertDescription className="text-yellow-800">
+                <span className="font-semibold">Tiempo restante para completar el pago:</span>{' '}
+                <span className="text-lg font-bold">{formatearTiempo(tiempoRestante)}</span>
               </AlertDescription>
-            </div>
-          </Alert>
-        )}
+            </Alert>
+          )}
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Payment Form */}
           <div className="lg:col-span-2">
             <Card className="p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Información de pago</h2>
-
-              {/* Warning */}
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 flex items-start gap-3">
-                <span className="text-yellow-600 text-xl">⚠️</span>
-                <p className="text-sm text-yellow-800">
-                  Esta es una simulación. No se realizará ningún cargo real
-                </p>
-              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-6">Información de pago</h2>
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Card Number */}
@@ -343,32 +380,26 @@ export default function CheckoutPage() {
                     maxLength={19}
                     value={paymentData.cardNumber}
                     onChange={(e) => {
-                      let value = e.target.value.replace(/\s/g, '');
-                      value = value.replace(/(\d{4})/g, '$1 ').trim();
+                      let value = e.target.value.replace(/\s/g, '').replace(/\D/g, '');
+                      value = value.match(/.{1,4}/g)?.join(' ') || value;
                       setPaymentData({ ...paymentData, cardNumber: value });
                     }}
                     className="h-12"
                     required
                   />
-                  <div className="flex gap-2 mt-2">
-                    <div className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-bold">VISA</div>
-                    <div className="bg-red-600 text-white px-3 py-1 rounded text-xs font-bold">Mastercard</div>
-                    <div className="bg-blue-500 text-white px-3 py-1 rounded text-xs font-bold">AMEX</div>
-                  </div>
                 </div>
 
                 {/* Card Name */}
                 <div className="space-y-2">
-                  <Label htmlFor="cardName" className="flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    Nombre en la tarjeta
+                  <Label htmlFor="cardName">
+                    Nombre del titular
                   </Label>
                   <Input
                     id="cardName"
                     type="text"
-                    placeholder="JUAN PÉREZ"
+                    placeholder="Como aparece en la tarjeta"
                     value={paymentData.cardName}
-                    onChange={(e) => setPaymentData({ ...paymentData, cardName: e.target.value.toUpperCase() })}
+                    onChange={(e) => setPaymentData({ ...paymentData, cardName: e.target.value })}
                     className="h-12"
                     required
                   />
@@ -379,7 +410,7 @@ export default function CheckoutPage() {
                   <div className="space-y-2">
                     <Label htmlFor="expiryDate" className="flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
-                      Fecha de vencimiento
+                      Fecha de expiración
                     </Label>
                     <Input
                       id="expiryDate"
