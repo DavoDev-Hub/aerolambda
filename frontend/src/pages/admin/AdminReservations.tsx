@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { Card } from '@/components/ui/Card';
+import { API_BASE_URL } from "@/config/api";
 import {  
   Search, 
   Filter, 
@@ -49,7 +50,7 @@ export default function AdminReservations() {
   const fetchReservations = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/reservas/todas', {
+      const response = await fetch(`${API_BASE_URL}/api/reservas/todas`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 

@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import Header from '@/components/flight/Header';
 import SearchHeader from '@/components/flight/SearchHeader';
 import FlightCard, { Flight } from '@/components/flight/FlightCard';
+import { API_BASE_URL } from "@/config/api";
 
 // Variantes para la animación escalonada
 const containerVariants = {
@@ -55,7 +56,7 @@ export default function FlightSearchResults() {
 
         // 1. Buscar vuelos de IDA
         const paramsIda = new URLSearchParams({ origen, destino, fecha });
-        const responseIda = await fetch(`/api/vuelos/buscar?${paramsIda.toString()}`);
+        const responseIda = await fetch(`${API_BASE_URL}/api/vuelos/buscar?${paramsIda.toString()}`);
         
         if (!responseIda.ok) throw new Error('Error al buscar vuelos');
         const dataIda = await responseIda.json();
@@ -73,7 +74,7 @@ export default function FlightSearchResults() {
             destino: origen,
             fecha: fechaVuelta,
           });
-          const responseVuelta = await fetch(`/api/vuelos/buscar?${paramsVuelta.toString()}`);
+          const responseVuelta = await fetch(`${API_BASE_URL}/api/vuelos/buscar?${paramsVuelta.toString()}`);
           if (responseVuelta.ok) {
             const dataVuelta = await responseVuelta.json();
             if (dataVuelta.success) setFlightsVuelta(dataVuelta.data.vuelos || []);

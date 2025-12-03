@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/Label';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Alert, AlertDescription } from '@/components/ui/Alert';
 import { CreditCard, Calendar, Lock, Clock, User, AlertCircle, ShieldCheck } from 'lucide-react';
+import { API_BASE_URL } from "@/config/api";
 
 interface Reserva {
   _id: string;
@@ -84,7 +85,7 @@ export default function CheckoutPage() {
         if (!token) { navigate('/login'); return; }
 
         const reservasPromises = reservaIds.map((id: string) =>
-          fetch(`/api/reservas/${id}`, { headers: { Authorization: `Bearer ${token}` } })
+          fetch(`${API_BASE_URL}/api/reservas/${id}`, { headers: { Authorization: `Bearer ${token}` } })
             .then(res => { if (!res.ok) throw new Error(`Error ${res.status}`); return res.json(); })
         );
 
@@ -98,7 +99,7 @@ export default function CheckoutPage() {
           const tiempo = calcularTiempoRestante(reservasPendientes[0].createdAt);
           if (tiempo <= 0) {
             setError('Esta reserva ha expirado. Por favor, realiza una nueva búsqueda.');
-            try { await fetch(`/api/reservas/${reservasPendientes[0]._id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); } catch (err) { console.error(err); }
+            try { await fetch(`${API_BASE_URL}/api/reservas/${reservasPendientes[0]._id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); } catch (err) { console.error(err); }
             setLoading(false);
             return;
           }
@@ -146,7 +147,7 @@ export default function CheckoutPage() {
       if (!token) { navigate('/login'); return; }
 
       const confirmacionesPromises = reservas.map((reserva) =>
-        fetch('/api/reservas/confirmar-pago', {
+        fetch(`${API_BASE_URL}/api/reservas/confirmar-pago`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ reservaId: reserva._id, metodoPago: `Tarjeta terminada en ${paymentData.cardNumber.slice(-4)}` }),

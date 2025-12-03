@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Check, Plane, Calendar, Clock, User, Luggage, Briefcase, Download } from 'lucide-react';
 import { generateBoardingPass } from '@/utils/ticketGenerator';
+import { API_BASE_URL } from "@/config/api";
 
 export default function ConfirmationPage() {
   const { reservaId } = useParams<{ reservaId: string }>();
@@ -49,7 +50,7 @@ export default function ConfirmationPage() {
           return;
         }
 
-        const response = await fetch(`/api/reservas/${reservaId}`, {
+        const response = await fetch(`${API_BASE_URL}/api/reservas/${reservaId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();

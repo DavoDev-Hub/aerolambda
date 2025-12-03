@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import './datepicker-custom.css';
+import { API_BASE_URL } from "@/config/api";
 
 type FlightSearchFormData = {
   origin: string;
@@ -110,7 +111,7 @@ export default function FlightSearchForm() {
   const fetchAvailableRoutes = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/vuelos/rutas-disponibles');
+      const response = await fetch(`${API_BASE_URL}/api/vuelos/rutas-disponibles`);
       const data = await response.json();
 
       if (data.success) {
@@ -152,7 +153,6 @@ export default function FlightSearchForm() {
 
     setOrigins(fallbackCities);
     setDestinations(fallbackCities);
-    console.warn('⚠️ Usando ciudades hardcodeadas. Endpoint /api/vuelos/rutas-disponibles no disponible.');
   };
 
   const handleChange = <K extends keyof FlightSearchFormData>(

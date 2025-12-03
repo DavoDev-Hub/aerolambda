@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { ArrowRight, Check, ChevronLeft, Armchair, CreditCard, Users, X as LockIcon, Sparkles } from 'lucide-react';
+import { API_BASE_URL } from "@/config/api";
 
 // --- Interfaces ---
 interface Flight {
@@ -86,14 +87,14 @@ export default function SeatSelection() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const seatsResponse = await fetch(`/api/asientos/vuelo/${vueloId}`);
+        const seatsResponse = await fetch(`${API_BASE_URL}/api/asientos/vuelo/${vueloId}`);
         const seatsData = await seatsResponse.json();
 
         if (seatsData.success) {
           setSeats(seatsData.data.asientos);
           const vueloBasico = seatsData.data.vuelo;
           
-          const flightResponse = await fetch(`/api/vuelos/buscar?origen=${vueloBasico.origen?.codigo || ''}&destino=${vueloBasico.destino?.codigo || ''}`);
+          const flightResponse = await fetch(`${API_BASE_URL}/api/vuelos/buscar?origen=${vueloBasico.origen?.codigo || ''}&destino=${vueloBasico.destino?.codigo || ''}`);
           const flightData = await flightResponse.json();
           
           if (flightData.success && flightData.data.vuelos.length > 0) {
@@ -187,7 +188,7 @@ export default function SeatSelection() {
             pasajeros: passengersData 
           };
 
-      const response = await fetch('/api/reservas', {
+      const response = await fetch(`${API_BASE_URL}/api/reservas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(payload)

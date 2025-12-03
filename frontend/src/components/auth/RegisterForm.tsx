@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Mail, Lock, User, Phone, AlertCircle } from 'lucide-react';
+import { API_BASE_URL } from "@/config/api";
 
 interface RegisterFormProps {
   onSuccess?: () => void;
@@ -39,7 +40,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
     setApiError(null);
 
     try {
-      const response = await fetch('/api/auth/registro', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/registro`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

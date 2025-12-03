@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast'; // ← AGREGADO
 import AdminLayout from '@/components/layout/AdminLayout';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { API_BASE_URL } from "@/config/api";
 import { 
   Plus, 
   Edit2, 
@@ -41,7 +42,7 @@ export default function AdminFlights() {
   const fetchFlights = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/vuelos', {
+      const response = await fetch(`${API_BASE_URL}/api/vuelos`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -78,7 +79,7 @@ export default function AdminFlights() {
     try {
       const token = localStorage.getItem('token');
       const method = modalMode === 'create' ? 'POST' : 'PUT';
-      const url = modalMode === 'create' ? '/api/vuelos' : `/api/vuelos/${selectedFlight?._id}`;
+      const url = modalMode === 'create' ? `${API_BASE_URL}/api/vuelos` : `${API_BASE_URL}/api/vuelos/${selectedFlight?._id}`;
 
       const response = await fetch(url, {
         method,
@@ -115,7 +116,7 @@ export default function AdminFlights() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/vuelos/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/vuelos/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

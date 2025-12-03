@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { Card } from '@/components/ui/Card';
 import { Plane, Calendar, Users, DollarSign } from 'lucide-react';
+import { API_BASE_URL } from "@/config/api";
 import {
   AreaChart,
   Area,
@@ -42,14 +43,14 @@ export default function AdminDashboard() {
         const token = localStorage.getItem('token');
         
         // 1. Estadísticas
-        const statsResponse = await fetch('/api/dashboard/estadisticas', {
+        const statsResponse = await fetch(`${API_BASE_URL}/api/dashboard/estadisticas`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const statsData = await statsResponse.json();
         if (statsData.success) setEstadisticas(statsData.data);
 
         // 2. Gráfica
-        const reservasResponse = await fetch('/api/dashboard/reservas-por-mes', {
+        const reservasResponse = await fetch(`${API_BASE_URL}/api/dashboard/reservas-por-mes`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const reservasData = await reservasResponse.json();

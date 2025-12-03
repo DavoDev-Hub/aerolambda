@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { API_BASE_URL } from "@/config/api";
 import {
   Calendar,
   DollarSign,
@@ -78,7 +79,7 @@ export default function AdminReports() {
       if (fechaFin) params.append('fechaFin', fechaFin);
       if (estado) params.append('estado', estado);
 
-      const response = await fetch(`/api/reservas/reportes?${params.toString()}`, {
+      const response = await fetch(`${API_BASE_URL}/api/reservas/reportes?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 

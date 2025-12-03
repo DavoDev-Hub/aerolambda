@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { X, Armchair, Users, Check } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { API_BASE_URL } from "@/config/api";
 
 interface Seat {
   _id: string;
@@ -37,7 +38,7 @@ export default function SeatMapModal({ isOpen, onClose, vueloId, numeroVuelo, or
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`/api/asientos/vuelo/${vueloId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/asientos/vuelo/${vueloId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

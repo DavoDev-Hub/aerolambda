@@ -5,6 +5,7 @@ import Header from '@/components/flight/Header';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { API_BASE_URL } from "@/config/api";
 import {
   Plane,
   Calendar,
@@ -137,7 +138,7 @@ export default function MyBookingsPage() {
           return;
         }
 
-        const response = await fetch('/api/reservas/mis-reservas', {
+        const response = await fetch(`${API_BASE_URL}/api/reservas/mis-reservas`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -209,7 +210,7 @@ export default function MyBookingsPage() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/reservas/${reservaId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/reservas/${reservaId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });

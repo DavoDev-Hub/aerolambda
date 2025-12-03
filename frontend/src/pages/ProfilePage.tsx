@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Card } from '@/components/ui/Card';
 import { User, Mail, Phone, Lock, Save, Edit2 } from 'lucide-react';
-
+import { API_BASE_URL } from "@/config/api";
 export default function ProfilePage() {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
@@ -46,7 +46,7 @@ export default function ProfilePage() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/auth/perfil', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/perfil`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -105,7 +105,7 @@ export default function ProfilePage() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/auth/cambiar-password', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/cambiar-password`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
