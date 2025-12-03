@@ -698,6 +698,10 @@ export default function MyBookingsPage() {
                                 navigate(`/reservas/${reservation._id}/confirmacion`)
                               }
                             >
+                              <span className="flex items-center justify-center gap-2 w-full">
+                                <Eye className="w-4 h-4" />
+                                <span>Ver Detalles Históricos</span>
+                              </span>
                             </Button>
                           )}
                         </div>
