@@ -14,20 +14,15 @@ export default function AuthPage() {
     setActiveTab(tab);
   };
 
-  // OPTIMIZACIÓN 1: Eliminamos 'scale' porque Chrome sufre al escalar elementos con blur
   const cardVariants: Variants = {
     hidden: { opacity: 0, y: 20 }, 
     visible: { 
       opacity: 1, 
       y: 0, 
-      transition: { 
-        duration: 0.4, 
-        ease: "easeOut" 
-      }
+      transition: { duration: 0.5, ease: "easeOut" }
     }
   };
 
-  // Variantes para deslizar el contenido
   const slideVariants = {
     enter: (direction: number) => ({
       x: direction > 0 ? 20 : -20,
@@ -49,51 +44,50 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-gray-900">
+    <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-slate-950">
       
-      {/* 1. FONDO INMERSIVO */}
+      {/* 1. FONDO INMERSIVO DARK */}
       <div className="absolute inset-0 z-0">
         <img 
           src={loginImage} 
           alt="Fondo AeroLambda" 
-          className="w-full h-full object-cover scale-105"
+          className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
-        <div className="absolute inset-0 bg-gradient-to-t from-blue-900/40 via-transparent to-black/40" />
+        {/* Overlay degradado para unificar con el tema Dark Glass */}
+        <div className="absolute inset-0 bg-slate-950/60 mix-blend-multiply" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-blue-900/30" />
       </div>
 
       {/* 2. TARJETA CENTRAL */}
       <motion.div 
-        // OPTIMIZACIÓN 2: 'will-change-transform' fuerza al navegador a usar la GPU
-        className="relative z-10 w-full max-w-md mx-4 will-change-transform"
+        className="relative z-10 w-full max-w-md mx-4"
         variants={cardVariants}
         initial="hidden"
         animate="visible"
       >
-        {/* Header de la tarjeta */}
+        {/* Header */}
         <div className="text-center mb-8">
           <motion.div 
             initial={{ scale: 0, rotate: -180 }} 
             animate={{ scale: 1, rotate: 0 }} 
             transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.2 }}
-            className="inline-flex w-16 h-16 items-center justify-center bg-primary rounded-2xl shadow-lg shadow-blue-500/30 mb-4"
+            className="inline-flex w-16 h-16 items-center justify-center bg-blue-600 rounded-2xl shadow-lg shadow-blue-500/40 mb-4"
           >
             <span className="text-4xl text-white font-bold leading-none pb-1">λ</span>
           </motion.div>
-          <h1 className="text-4xl font-bold text-white tracking-tight drop-shadow-lg">
+          <h1 className="text-4xl font-bold text-white tracking-tight drop-shadow-xl">
             AeroLambda
           </h1>
-          <p className="text-blue-100 mt-2 text-base font-medium drop-shadow-md">
+          <p className="text-blue-200 mt-2 text-base font-medium">
             Tu viaje comienza aquí.
           </p>
         </div>
 
-        {/* Cuerpo de la tarjeta */}
-        {/* OPTIMIZACIÓN 3: Reducimos blur a 'md' y aumentamos opacidad a '95' para aliviar a Chrome */}
-        <div className="bg-white/95 backdrop-blur-md border border-white/50 shadow-2xl rounded-3xl overflow-hidden relative">
+        {/* Cuerpo de la tarjeta (GLASS OSCURO) */}
+        <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl overflow-hidden relative">
           
-          {/* Pestañas de Navegación */}
-          <div className="flex p-2 bg-gray-100/80 rounded-t-3xl border-b border-gray-200/50">
+          {/* Pestañas */}
+          <div className="flex p-1.5 bg-black/20 border-b border-white/5">
             <TabButton 
               isActive={activeTab === 'login'} 
               onClick={() => toggleTab('login')}
@@ -142,8 +136,7 @@ export default function AuthPage() {
           </div>
         </div>
         
-        {/* Footer */}
-        <p className="text-center text-white/60 text-xs mt-8 font-medium">
+        <p className="text-center text-slate-400 text-xs mt-8 font-medium">
           © {new Date().getFullYear()} AeroLambda. Conectando destinos.
         </p>
       </motion.div>
@@ -151,20 +144,20 @@ export default function AuthPage() {
   );
 }
 
-// Subcomponente de Pestañas (Sin cambios funcionales, solo estilo)
+// Botón de Pestaña Estilizado
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function TabButton({ label, isActive, onClick, icon }: any) {
   return (
     <button
       onClick={onClick}
-      className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold rounded-2xl transition-all duration-300 relative ${
-        isActive ? "text-primary" : "text-gray-500 hover:text-gray-700 hover:bg-white/40"
+      className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold rounded-xl transition-all duration-300 relative ${
+        isActive ? "text-white" : "text-slate-400 hover:text-white hover:bg-white/5"
       }`}
     >
       {isActive && (
         <motion.div
           layoutId="activeTabBg"
-          className="absolute inset-0 bg-white shadow-sm border border-gray-100 rounded-2xl"
+          className="absolute inset-0 bg-white/10 border border-white/10 shadow-sm rounded-xl"
           initial={false}
           transition={{ type: "spring", stiffness: 500, damping: 30 }}
         />

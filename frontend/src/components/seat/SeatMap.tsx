@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users } from 'lucide-react';
+import { Users, Check, X } from 'lucide-react';
 
 const ROWS = 19;
 const COLS = ['A', 'B', 'C', 'D', 'E', 'F'];
@@ -20,14 +20,18 @@ export default function SeatMap({ selectedSeat, onSeatSelect, occupiedSeats }: S
     return 'available';
   };
 
-  const getSeatColor = (status: string) => {
+  // ✅ NUEVOS ESTILOS DARK / NEÓN
+  const getSeatColor = (status: string, isHovered: boolean) => {
     switch (status) {
       case 'selected':
-        return 'bg-blue-600 text-white border-2 border-blue-700';
+        return 'bg-blue-600 text-white border-2 border-blue-400 shadow-[0_0_15px_rgba(37,99,235,0.6)] z-10 scale-110';
       case 'occupied':
-        return 'bg-gray-800 text-gray-400 cursor-not-allowed opacity-60';
+        return 'bg-slate-800/50 text-slate-700 border border-slate-700/50 cursor-not-allowed';
       default:
-        return 'bg-gray-200 text-gray-700 hover:bg-blue-100 cursor-pointer border-2 border-gray-300';
+        // Disponible
+        return isHovered 
+          ? 'bg-blue-500/20 border-blue-400 text-blue-200 scale-105 shadow-lg shadow-blue-500/10' 
+          : 'bg-white/5 border-white/10 text-slate-400 hover:border-white/30';
     }
   };
 
@@ -39,58 +43,47 @@ export default function SeatMap({ selectedSeat, onSeatSelect, occupiedSeats }: S
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-8">
-      <h2 className="text-2xl font-bold text-gray-900 mb-2">Selecciona tu asiento</h2>
-      <p className="text-sm text-gray-500 mb-6">Vuelo desde Ciudad de México a Cancún</p>
-
-      {/* Legend */}
-      <div className="flex flex-wrap gap-6 mb-8 pb-6 border-b border-gray-200">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gray-200 border-2 border-gray-300 rounded"></div>
-          <span className="text-sm text-gray-600">Disponible</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-blue-600 border-2 border-blue-700 rounded flex items-center justify-center">
-            <Users size={16} className="text-white" />
-          </div>
-          <span className="text-sm text-gray-600">Seleccionado</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gray-800 border-2 border-gray-700 rounded opacity-60"></div>
-          <span className="text-sm text-gray-600">Ocupado</span>
-        </div>
+    <div className="w-full">
+      {/* No ponemos bg-white aquí para que sea transparente 
+          y se vea el fondo de la tarjeta padre.
+      */}
+      
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-white mb-2">Mapa del Avión</h2>
+        <p className="text-sm text-slate-400">Frente de la aeronave ▲</p>
       </div>
 
-      {/* Seat Grid */}
-      <div className="overflow-x-auto pb-4 flex justify-center">
-        <div className="inline-block">
-          {/* Column Headers */}
-          <div className="flex justify-center gap-1 mb-4">
-            {COLS.map((col) => (
-              <div key={col} className="w-10 h-10 flex items-center justify-center font-bold text-gray-700 text-lg">
-                {col}
-              </div>
-            ))}
-            <div className="w-6"></div>
+      {/* Grid del Avión (Fuselaje Simulado) */}
+      <div className="bg-slate-900/50 border-x-2 border-t-2 border-slate-800 rounded-t-[10rem] pt-24 pb-8 px-4 max-w-sm mx-auto relative overflow-hidden">
+        
+        {/* Efecto de luz de cabina */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-blue-500/10 blur-[60px] rounded-full pointer-events-none"></div>
+
+        <div className="inline-block relative z-10">
+          {/* Cabecera de Columnas */}
+          <div className="flex justify-center gap-2 mb-4 text-xs font-bold text-slate-500">
+            {COLS.slice(0, 3).map(col => <div key={col} className="w-10 text-center">{col}</div>)}
+            <div className="w-8"></div> {/* Pasillo */}
+            {COLS.slice(3, 6).map(col => <div key={col} className="w-10 text-center">{col}</div>)}
           </div>
 
-          {/* Rows */}
-          {Array.from({ length: ROWS }, (_, i) => i + 3).map((row) => (
-            <div key={row} className="flex items-center justify-center gap-1 mb-1">
-              {/* Row Number Left */}
-              <div className="w-10 h-10 flex items-center justify-center font-semibold text-gray-700">{row}</div>
+          {/* Filas */}
+          {Array.from({ length: ROWS }, (_, i) => i + 1).map((row) => (
+            <div key={row} className="flex items-center justify-center gap-2 mb-2 relative group">
+              
+              {/* Número de fila (Izquierda - Flotante) */}
+              <div className="absolute -left-8 text-[10px] font-mono text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity">{row}</div>
 
-              {/* Left side seats (A, B, C) */}
+              {/* Asientos Izquierda (A, B, C) */}
               {COLS.slice(0, 3).map((col) => {
                 const seat = `${row}${col}`;
                 const show = shouldShowSeat(row, col);
 
-                if (!show) {
-                  return <div key={seat} className="w-10 h-10"></div>;
-                }
+                if (!show) return <div key={seat} className="w-10 h-10"></div>;
 
                 const status = getSeatStatus(seat);
                 const isOccupied = occupiedSeats.includes(seat);
+                const isHovered = hoveredSeat === seat;
 
                 return (
                   <button
@@ -99,31 +92,32 @@ export default function SeatMap({ selectedSeat, onSeatSelect, occupiedSeats }: S
                     onMouseEnter={() => !isOccupied && setHoveredSeat(seat)}
                     onMouseLeave={() => setHoveredSeat(null)}
                     disabled={isOccupied}
-                    className={`w-10 h-10 rounded font-bold text-xs flex items-center justify-center transition-all ${getSeatColor(status)} ${
-                      hoveredSeat === seat && !isOccupied ? 'ring-2 ring-blue-300 shadow-md' : ''
-                    }`}
-                    title={seat}
+                    className={`w-10 h-10 rounded-lg font-bold text-xs flex items-center justify-center transition-all duration-200 border ${getSeatColor(status, isHovered)}`}
+                    title={`Asiento ${seat}`}
                   >
-                    {status === 'occupied' ? '✕' : ''}
-                    {selectedSeat === seat && <Users size={16} />}
+                    {status === 'occupied' ? <X size={14} /> : null}
+                    {selectedSeat === seat && <Check size={16} strokeWidth={3} />}
+                    {status === 'available' && !isHovered && <span className="text-[10px] opacity-30">{col}</span>}
+                    {status === 'available' && isHovered && <Users size={16} />}
                   </button>
                 );
               })}
 
-              {/* Aisle spacer */}
-              <div className="w-6"></div>
+              {/* Pasillo */}
+              <div className="w-8 flex justify-center items-center">
+                <span className="text-[10px] font-mono text-slate-700">{row}</span>
+              </div>
 
-              {/* Right side seats (D, E, F) */}
+              {/* Asientos Derecha (D, E, F) */}
               {COLS.slice(3, 6).map((col) => {
                 const seat = `${row}${col}`;
                 const show = shouldShowSeat(row, col);
 
-                if (!show) {
-                  return <div key={seat} className="w-10 h-10"></div>;
-                }
+                if (!show) return <div key={seat} className="w-10 h-10"></div>;
 
                 const status = getSeatStatus(seat);
                 const isOccupied = occupiedSeats.includes(seat);
+                const isHovered = hoveredSeat === seat;
 
                 return (
                   <button
@@ -132,28 +126,20 @@ export default function SeatMap({ selectedSeat, onSeatSelect, occupiedSeats }: S
                     onMouseEnter={() => !isOccupied && setHoveredSeat(seat)}
                     onMouseLeave={() => setHoveredSeat(null)}
                     disabled={isOccupied}
-                    className={`w-10 h-10 rounded font-bold text-xs flex items-center justify-center transition-all ${getSeatColor(status)} ${
-                      hoveredSeat === seat && !isOccupied ? 'ring-2 ring-blue-300 shadow-md' : ''
-                    }`}
-                    title={seat}
+                    className={`w-10 h-10 rounded-lg font-bold text-xs flex items-center justify-center transition-all duration-200 border ${getSeatColor(status, isHovered)}`}
+                    title={`Asiento ${seat}`}
                   >
-                    {status === 'occupied' ? '✕' : ''}
-                    {selectedSeat === seat && <Users size={16} />}
+                    {status === 'occupied' ? <X size={14} /> : null}
+                    {selectedSeat === seat && <Check size={16} strokeWidth={3} />}
+                    {status === 'available' && !isHovered && <span className="text-[10px] opacity-30">{col}</span>}
+                    {status === 'available' && isHovered && <Users size={16} />}
                   </button>
                 );
               })}
-
-              {/* Row Number Right */}
-              <div className="w-10 h-10 flex items-center justify-center font-semibold text-gray-700 ml-1">{row}</div>
-
             </div>
           ))}
         </div>
       </div>
-
-      <p className="text-xs text-gray-500 text-center mt-6">
-        Distribución: 3 asientos - pasillo - 3 asientos (A, B, C | pasillo | D, E, F)
-      </p>
     </div>
   );
 }

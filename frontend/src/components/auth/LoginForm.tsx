@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-expressions */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
@@ -23,19 +24,9 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-
-    if (!formData.email) {
-      newErrors.email = 'El correo es requerido';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Correo electrónico inválido';
-    }
-
-    if (!formData.password) {
-      newErrors.password = 'La contraseña es requerida';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'La contraseña debe tener al menos 6 caracteres';
-    }
-
+    if (!formData.email) newErrors.email = 'El correo es requerido';
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Correo inválido';
+    if (!formData.password) newErrors.password = 'La contraseña es requerida';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -43,52 +34,27 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
-
     setIsSubmitting(true);
     setApiError(null);
 
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, password: formData.password }),
       });
-
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Error al iniciar sesión');
-      }
+      if (!response.ok) throw new Error(data.message || 'Error al iniciar sesión');
 
       if (data.success) {
-        // Guardar token y datos del usuario
         localStorage.setItem('token', data.data.token);
         localStorage.setItem('user', JSON.stringify(data.data.usuario));
-
-        // ✅ REDIRECCIÓN SEGÚN ROL
-        const userRole = data.data.usuario.rol;
-
-        if (onSuccess) {
-          onSuccess();
-        } else {
-          // Redirigir según el rol
-          if (userRole === 'admin') {
-            navigate('/admin');
-          } else {
-            navigate('/');
-          }
-        }
-      } else {
-        throw new Error(data.message || 'Error al iniciar sesión');
+        if (onSuccess) onSuccess();
+        else data.data.usuario.rol === 'admin' ? navigate('/admin') : navigate('/');
       }
     } catch (err) {
       const error = err as Error;
-      console.error('Login error:', error);
       setApiError(error.message);
     } finally {
       setIsSubmitting(false);
@@ -98,80 +64,63 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {apiError && (
-        <div className="p-3 rounded-md bg-red-50 border border-red-200">
-          <p className="text-sm text-red-600">{apiError}</p>
+        <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-400" />
+          <p className="text-sm text-red-200">{apiError}</p>
         </div>
       )}
 
-      {/* Indicador de cuenta admin */}
-      {formData.email && (formData.email.includes('admin') || formData.email.includes('administrador')) && (
-        <div className="p-3 rounded-md bg-blue-50 border border-blue-200 flex items-center gap-2">
-          <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-          <p className="text-sm text-blue-700 font-medium">
-            Iniciando sesión como administrador
-          </p>
-        </div>
-      )}
-
+      {/* Input Correo */}
       <div className="space-y-2">
-        <Label htmlFor="email" className="text-foreground font-medium">
-          Correo electrónico
-        </Label>
+        <Label htmlFor="email" className="text-slate-300">Correo electrónico</Label>
         <div className="relative">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
           <Input
             id="email"
             type="email"
             placeholder="tu@email.com"
-            className={`pl-10 h-12 ${errors.email ? 'border-destructive' : ''}`}
+            className={`pl-10 h-12 bg-slate-950/50 border-white/10 text-white placeholder:text-slate-600 focus:border-blue-500 focus:ring-blue-500/20 ${errors.email ? 'border-red-500/50' : ''}`}
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           />
-          {errors.email && (
-            <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-destructive" />
-          )}
         </div>
-        {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+        {errors.email && <p className="text-xs text-red-400 mt-1">{errors.email}</p>}
       </div>
 
+      {/* Input Password */}
       <div className="space-y-2">
-        <Label htmlFor="password" className="text-foreground font-medium">
-          Contraseña
-        </Label>
+        <Label htmlFor="password" className="text-slate-300">Contraseña</Label>
         <div className="relative">
-          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
           <Input
             id="password"
             type="password"
             placeholder="••••••••"
-            className={`pl-10 h-12 ${errors.password ? 'border-destructive' : ''}`}
+            className={`pl-10 h-12 bg-slate-950/50 border-white/10 text-white placeholder:text-slate-600 focus:border-blue-500 focus:ring-blue-500/20 ${errors.password ? 'border-red-500/50' : ''}`}
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
           />
-          {errors.password && (
-            <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-destructive" />
-          )}
         </div>
-        {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
+        {errors.password && <p className="text-xs text-red-400 mt-1">{errors.password}</p>}
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="remember"
-            checked={formData.remember}
-            onCheckedChange={(checked) => setFormData({ ...formData, remember: checked as boolean })}
-          />
-          <label
-            htmlFor="remember"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-foreground cursor-pointer"
-          >
-            Recordarme
-          </label>
-        </div>
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id="remember"
+          checked={formData.remember}
+          onCheckedChange={(checked) => setFormData({ ...formData, remember: checked as boolean })}
+          className="border-white/30 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+        />
+        <label htmlFor="remember" className="text-sm font-medium leading-none text-slate-300 cursor-pointer">
+          Recordarme
+        </label>
       </div>
 
-      <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={isSubmitting}>
+      <Button 
+        type="submit" 
+        className="w-full h-12 text-base font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 border-0" 
+        disabled={isSubmitting}
+      >
         {isSubmitting ? 'Iniciando sesión...' : 'Iniciar sesión'}
       </Button>
     </form>

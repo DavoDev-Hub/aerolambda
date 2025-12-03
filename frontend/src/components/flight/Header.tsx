@@ -9,11 +9,13 @@ export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // ✅ AGREGAMOS '/vuelos/buscar' A LAS PÁGINAS OSCURAS/TRANSPARENTES
+  // ✅ ACTUALIZADO: Incluye '/perfil' en el modo oscuro
   const isDarkPage = 
     location.pathname === '/' || 
     location.pathname === '/mis-reservas' || 
-    location.pathname === '/vuelos/buscar';
+    location.pathname === '/perfil' ||
+    location.pathname.startsWith('/vuelos/') ||
+    location.pathname.startsWith('/reservas/'); 
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -42,6 +44,7 @@ export default function Header() {
   let separatorClass = '';
 
   if (isDarkPage) {
+    // --- MODO OSCURO ---
     if (isScrolled) {
       headerClass = 'bg-slate-950/90 backdrop-blur-md border-b border-white/10 shadow-lg py-0';
     } else {
@@ -53,6 +56,7 @@ export default function Header() {
     logoTextClass = 'text-white drop-shadow-md';
     separatorClass = 'bg-white/20';
   } else {
+    // --- MODO CLARO ---
     headerClass = 'bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm py-0';
     textClass = 'text-gray-600 hover:text-gray-900 font-medium transition-colors';
     activeLinkClass = 'text-primary font-bold';
