@@ -83,16 +83,18 @@ export const crearReserva = async (req: Request, res: Response): Promise<void> =
         });
         return;
       }
+  
+      const precioAsiento = asiento.tipo === 'ejecutiva' ? vuelo.precio * 2 : vuelo.precio;
 
       // Crear la reserva
-      const nuevaReserva = await Booking.create({
-        usuario: usuarioId,
-        vuelo: vueloId,
-        asiento: asientoId,
-        pasajero,
-        precioTotal: vuelo.precio,
-        estado: 'pendiente'
-      });
+        const nuevaReserva = await Booking.create({
+          usuario: usuarioId,
+          vuelo: vueloId,
+          asiento: asientoId,
+          pasajero,
+          precioTotal: precioAsiento,  // ← PRECIO CORRECTO
+          estado: 'pendiente'
+        });
 
       // Bloquear el asiento
       const tiempoBloqueo = 15 * 60 * 1000;
@@ -139,15 +141,19 @@ export const crearReserva = async (req: Request, res: Response): Promise<void> =
     const reservasCreadas = [];
     const tiempoBloqueo = 15 * 60 * 1000;
 
-    for (let i = 0; i < asientos.length; i++) {
-      const nuevaReserva = await Booking.create({
-        usuario: usuarioId,
-        vuelo: vueloId,
-        asiento: asientos[i],
-        pasajero: pasajeros[i],
-        precioTotal: vuelo.precio,
-        estado: 'pendiente'
-      });
+for (let i = 0; i < asientos.length; i++) {
+        // Calcular precio según tipo de asiento
+        const asientoObj = asientosObjs[i];
+        const precioAsiento = asientoObj.tipo === 'ejecutiva' ? vuelo.precio * 2 : vuelo.precio;
+        
+        const nuevaReserva = await Booking.create({
+          usuario: usuarioId,
+          vuelo: vueloId,
+          asiento: asientos[i],
+          pasajero: pasajeros[i],
+          precioTotal: precioAsiento,  // ← PRECIO CORRECTO
+          estado: 'pendiente'
+        });
 
       // Bloquear el asiento
       const asiento = asientosObjs[i];
@@ -166,16 +172,18 @@ export const crearReserva = async (req: Request, res: Response): Promise<void> =
       .populate('vuelo', 'numeroVuelo origen destino fechaSalida horaSalida fechaLlegada horaLlegada')
       .populate('asiento', 'numero fila columna tipo');
 
-    res.status(201).json({
-      success: true,
-      message: `${reservasCreadas.length} reservas creadas. Tienes 15 minutos para completar el pago`,
-      data: {
-        _id: reservasCreadas[0]._id, // ID de la primera reserva para el pago
-        reservas: reservasCompletas,
-        totalReservas: reservasCreadas.length,
-        precioTotal: vuelo.precio * reservasCreadas.length
-      }
-    });
+        const precioTotal = reservasCreadas.reduce((total, reserva) => 
+          total + reserva.precioTotal, 0
+        );
+
+        res.status(201).json({
+          success: true,
+          message: `${reservasCreadas.length} reservas creadas...`,
+          data: {
+            reservas: reservasCompletas,
+            precioTotal: precioTotal  // ← SUMA CORRECTA
+          }
+        });
   } catch (error: any) {
     console.error('Error al crear reserva:', error);
     res.status(500).json({

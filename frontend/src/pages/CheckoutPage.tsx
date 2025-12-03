@@ -181,8 +181,7 @@ export default function CheckoutPage() {
 
   const vuelo = reservas[0].vuelo;
   const precioBase = precioTotalState || reservas.reduce((acc, r) => acc + r.precioTotal, 0);
-  const impuestos = Math.round(precioBase * 0.16);
-  const total = precioBase + impuestos;
+  const total = precioBase
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-blue-950 relative overflow-hidden">
@@ -338,12 +337,8 @@ export default function CheckoutPage() {
 
               <div className="border-t border-white/10 pt-4 space-y-3">
                 <div className="flex justify-between text-sm text-slate-300">
-                  <span>Precio base</span>
+                  <span>Precio</span>
                   <span>${precioBase.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-sm text-slate-300">
-                  <span>Impuestos (16%)</span>
-                  <span>${impuestos.toLocaleString()}</span>
                 </div>
                 <div className="border-t border-white/10 pt-3 flex justify-between items-end">
                   <span className="text-lg font-bold text-white">Total</span>
