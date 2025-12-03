@@ -196,20 +196,44 @@ export default function SeatSelection() {
 
       const data = await response.json();
 
+
       if (data.success) {
-        toast.success('Reserva creada exitosamente');
-        const reservaId = data.data?.reserva?._id || data.data?._id;
+        toast.success(`${numPasajeros === 1 ? 'Reserva creada' : `${numPasajeros} reservas creadas`} exitosamente`);
+        
+        // ✅ Extraer IDs de reservas (múltiples o única)
+        let reservaIds: string[] = [];
+        
+        if (numPasajeros === 1) {
+          // Reserva simple: puede venir como data.reserva o data._id
+          const reservaId = data.data?.reserva?._id || data.data?._id;
+          if (reservaId) {
+            reservaIds = [reservaId];
+          }
+        } else {
+          // Reservas múltiples: vienen como array en data.reservas
+          if (data.data?.reservas && Array.isArray(data.data.reservas)) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            reservaIds = data.data.reservas.map((r: any) => r._id);
+          }
+        }
+        
         const amount = data.data?.precioTotal || data.data?.reserva?.precioTotal || precioTotal;
         
-        if (!reservaId) {
+        if (reservaIds.length === 0) {
+          console.error('❌ No se recibieron IDs de reserva:', data);
           toast.error('Error: No se recibió el ID de reserva');
           return;
         }
         
-        navigate(`/reservas/${reservaId}/pago`, { 
-          state: { amount: amount }
+        console.log(`✅ ${reservaIds.length} reserva(s) creada(s):`, reservaIds);
+        
+        // ✅ Navegar con todos los IDs
+        navigate(`/reservas/${reservaIds[0]}/pago`, { 
+          state: { 
+            reservaIds: reservaIds,  // ← Array de todos los IDs
+            amount: amount 
+          }
         });
-      } else {
         toast.error(data.message || 'Error al crear la reserva');
       }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

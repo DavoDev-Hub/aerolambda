@@ -182,7 +182,6 @@ export default function AdminFlights() {
         
         {/* Header con Stats */}
         <div>
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">Gestión de Vuelos</h1>
           <p className="text-slate-500">Administra todos los vuelos disponibles</p>
         </div>
 

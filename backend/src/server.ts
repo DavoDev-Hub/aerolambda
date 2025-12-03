@@ -16,26 +16,38 @@ dotenv.config();
 const app: Application = express();
 const PORT = process.env.PORT || 5000;
 
-// Middlewares
-const allowedOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
+// ✅ CORS dinámico para desarrollo y producción
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  process.env.FRONTEND_URL || 'https://aerolambda-frontend.onrender.com'
+];
 
-app.use(
-  cors({
-    origin: allowedOrigin,
-    credentials: true,
-  })
-);
+app.use(cors({
+  origin: (origin, callback) => {
+    // Permitir requests sin origin (como mobile apps, curl, etc)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Ruta de prueba
 app.get('/api/health', (req: Request, res: Response) => {
-  res.json({
-    status: 'ok',
+  res.json({ 
+    status: 'ok', 
     message: 'AeroLambda API está funcionando',
     timestamp: new Date().toISOString(),
     database: 'MongoDB conectado',
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
@@ -50,7 +62,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use((req: Request, res: Response) => {
   res.status(404).json({
     success: false,
-    message: 'Ruta no encontrada',
+    message: 'Ruta no encontrada'
   });
 });
 
@@ -59,11 +71,12 @@ const startServer = async () => {
   try {
     // Conectar a MongoDB
     await connectDB();
-
+    
     // Iniciar servidor
     app.listen(PORT, () => {
-      console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
-      console.log(`✈️  AeroLambda Backend - TypeScript`);
+      console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+      console.log(`✈️  AeroLambda Backend - ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🌍 CORS habilitado para: ${allowedOrigins.join(', ')}`);
     });
   } catch (error) {
     console.error('❌ Error al iniciar el servidor:', error);
@@ -73,6 +86,7 @@ const startServer = async () => {
 
 // Iniciar
 startServer();
+
 
 // ===============================================
 // 🧹 JOB DE LIMPIEZA DE RESERVAS PENDIENTES
@@ -84,19 +98,19 @@ import Flight from './models/Flight';
 const limpiarReservasPendientes = async () => {
   try {
     const hace15Min = new Date(Date.now() - 15 * 60 * 1000);
-
+    
     const reservasExpiradas = await Booking.find({
       estado: 'pendiente',
-      createdAt: { $lt: hace15Min },
+      createdAt: { $lt: hace15Min }
     });
 
     for (const reserva of reservasExpiradas) {
       console.log(`❌ Cancelando reserva expirada: ${reserva.codigoReserva}`);
-
+      
       // Cambiar estado a cancelada
       reserva.estado = 'cancelada';
       await reserva.save();
-
+      
       // Liberar asiento
       const asiento = await Seat.findById(reserva.asiento);
       if (asiento && asiento.estado === 'bloqueado') {
@@ -104,14 +118,17 @@ const limpiarReservasPendientes = async () => {
         asiento.reserva = undefined;
         asiento.bloqueadoHasta = undefined;
         await asiento.save();
-
-        // Incrementar asientos disponibles del vuelo
-        await Flight.findByIdAndUpdate(reserva.vuelo, {
-          $inc: { asientosDisponibles: 1 },
-        });
+        
+        // ✅ CORRECCIÓN: NO incrementar asientosDisponibles
+        // Razón: Cuando se crea una reserva PENDIENTE, NO se decrementa asientosDisponibles
+        // Solo se decrementa cuando se CONFIRMA el pago
+        // Por lo tanto, al expirar una pendiente, NO debemos incrementar
+        // (porque nunca se decrementó en primer lugar)
+        
+        console.log(`  ✅ Asiento ${asiento.numero} liberado`);
       }
     }
-
+    
     if (reservasExpiradas.length > 0) {
       console.log(`✅ ${reservasExpiradas.length} reservas pendientes canceladas`);
     }

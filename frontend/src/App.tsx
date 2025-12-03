@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
 import LandingPage from './pages/LandingPage';
 import FlightSearchResults from './pages/FlightSearchResults';
 import SeatSelection from './pages/SeatSelection';
@@ -13,11 +14,17 @@ import AdminReports from './pages/admin/AdminReports';
 import ProtectedRoute from './components/ProtectedRoute';
 import ProfilePage from './pages/ProfilePage';
 import { Toaster } from 'react-hot-toast';
+import { setupAuthInterceptor } from './utils/authInterceptor';
 
 function App() {
+  // ✅ Configurar interceptor al montar la app
+  useEffect(() => {
+    setupAuthInterceptor();
+  }, []);
+
   return (
     <BrowserRouter>
-          <Toaster position="top-right" />  {/* ← Agregar */}
+      <Toaster position="top-right" />
       <Routes>
         {/* Rutas públicas */}
         <Route path="/" element={<LandingPage />} />
@@ -26,9 +33,6 @@ function App() {
         <Route path="/login" element={<AuthPage />} />
         
         {/* Rutas de cliente (protegidas) */}
-        import ProfilePage from './pages/ProfilePage';
-
-// En las rutas:
         <Route 
           path="/perfil" 
           element={

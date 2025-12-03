@@ -140,11 +140,6 @@ export default function FlightCard({ flight, numPasajeros = 1, isBestValue }: Fl
                   </span>
                 </div>
               )}
-              {equipajeDocumentado.permitido && equipajeDocumentado.precioExtra > 0 && (
-                <span className="text-[10px] text-slate-500 bg-white/5 px-2 py-0.5 rounded">
-                  +${equipajeDocumentado.precioExtra} extra
-                </span>
-              )}
             </div>
           </div>
 
