@@ -7,6 +7,14 @@ export const registro = async (req: Request, res: Response): Promise<void> => {
   try {
     const { nombre, apellido, email, password, telefono, rol } = req.body;
 
+    if (rol === 'admin') {
+      res.status(403).json({
+        success: false,
+        message: 'No está permitido crear administradores desde este endpoint'
+      });
+      return;
+    }
+
     // Verificar si el usuario ya existe
     const usuarioExistente = await User.findOne({ email });
     if (usuarioExistente) {
@@ -17,6 +25,9 @@ export const registro = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // Rol fijo para usuarios registrados desde la web
+    const rolAsignado = 'cliente'; // o 'usuario', como lo manejes en tu app
+
     // Crear nuevo usuario
     const nuevoUsuario = await User.create({
       nombre,
@@ -24,10 +35,10 @@ export const registro = async (req: Request, res: Response): Promise<void> => {
       email,
       password,
       telefono,
-      rol: rol || 'cliente'
+      rol: rolAsignado
     });
 
-// Generar token
+    // Generar token
     const token = generarToken({
       id: nuevoUsuario._id.toString(),
       email: nuevoUsuario.email,
@@ -97,7 +108,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     usuario.ultimoAcceso = new Date();
     await usuario.save();
 
-// Generar token
+    // Generar token
     const token = generarToken({
       id: usuario._id.toString(),
       email: usuario.email,
