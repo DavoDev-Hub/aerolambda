@@ -122,9 +122,16 @@ export default function FlightSearchResults() {
 
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
-    // Ajustar zona horaria para evitar desfases de día
-    const date = new Date(dateString + 'T00:00:00'); 
-    return date.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' });
+    
+    const date = new Date(dateString + 'T00:00:00');
+    
+    // Formato: "20 Ene" (sin día de semana para evitar confusión)
+    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    
+    const day = date.getDate();
+    const month = monthNames[date.getMonth()];
+    
+    return `${day} ${month}`;
   };
 
   return (

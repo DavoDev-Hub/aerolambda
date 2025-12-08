@@ -73,7 +73,8 @@ export default function SearchHeader({
               </div>
               <div className="flex flex-col">
                 <span className="text-[10px] uppercase tracking-widest font-bold text-slate-400 mb-1">Fecha</span>
-                <span className="font-bold text-lg text-white capitalize">{date}</span>
+                {/* ✅ Removemos capitalize que causaba confusión */}
+                <span className="font-bold text-lg text-white">{date}</span>
               </div>
             </div>
 

@@ -192,7 +192,10 @@ export default function FlightSearchForm() {
 
   // Función para verificar si una fecha de objeto Date está disponible
   const isDateObjectAvailable = (date: Date): boolean => {
-    const dateString = date.toISOString().split('T')[0];
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateString = `${year}-${month}-${day}`;
     return availableRoutes.length === 0 || availableDates.includes(dateString);
   };
 
@@ -335,10 +338,13 @@ export default function FlightSearchForm() {
           <div className={`${formData.isRoundTrip ? 'md:col-span-2' : 'md:col-span-3'} relative`}>
             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10 w-4 h-4 pointer-events-none" />
             <DatePicker
-              selected={formData.departureDate ? new Date(formData.departureDate) : null}
+              selected={formData.departureDate ? new Date(formData.departureDate + 'T00:00:00') : null}
               onChange={(date: Date | null) => {
                 if (date) {
-                  handleChange('departureDate', date.toISOString().split('T')[0]);
+                  const year = date.getFullYear();
+                  const month = String(date.getMonth() + 1).padStart(2, '0');
+                  const day = String(date.getDate()).padStart(2, '0');
+                  handleChange('departureDate', `${year}-${month}-${day}`);
                 }
               }}
               minDate={new Date()}
@@ -351,7 +357,10 @@ export default function FlightSearchForm() {
               }`}
               calendarClassName="custom-datepicker"
               dayClassName={(date) => {
-                const dateString = date.toISOString().split('T')[0];
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const dateString = `${year}-${month}-${day}`;
                 if (availableRoutes.length > 0) {
                   return availableDates.includes(dateString)
                     ? 'available-date'
@@ -367,13 +376,16 @@ export default function FlightSearchForm() {
             <div className="md:col-span-2 relative">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10 w-4 h-4 pointer-events-none" />
               <DatePicker
-                selected={formData.returnDate ? new Date(formData.returnDate) : null}
+                selected={formData.returnDate ? new Date(formData.returnDate + 'T00:00:00') : null}
                 onChange={(date: Date | null) => {
                   if (date) {
-                    handleChange('returnDate', date.toISOString().split('T')[0]);
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    handleChange('returnDate', `${year}-${month}-${day}`);
                   }
                 }}
-                minDate={formData.departureDate ? new Date(formData.departureDate) : new Date()}
+                minDate={formData.departureDate ? new Date(formData.departureDate + 'T00:00:00') : new Date()}
                 disabled={!formData.departureDate}
                 dateFormat="dd/MM/yyyy"
                 placeholderText="dd/mm/aaaa"
