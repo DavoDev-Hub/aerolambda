@@ -228,7 +228,6 @@ flightSchema.pre('deleteOne', { document: true, query: false }, async function(n
     const Booking = mongoose.model('Booking');
     const Seat = mongoose.model('Seat');
     
-    // Cancelar todas las reservas asociadas a este vuelo
     await Booking.updateMany(
       { vuelo: this._id, estado: { $in: ['pendiente', 'confirmada'] } },
       { 
