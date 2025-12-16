@@ -497,11 +497,8 @@ export const obtenerTodasReservas = async (req: Request, res: Response): Promise
 export const obtenerReportes = async (req: Request, res: Response): Promise<void> => {
   try {
     const { fechaInicio, fechaFin, vueloId, origen, destino, estado } = req.query;
-
-    // Construir filtros
     const filtros: any = {};
 
-    // Filtro de fechas (usando createdAt de la reserva)
     if (fechaInicio || fechaFin) {
       filtros.createdAt = {};
       if (fechaInicio) {
